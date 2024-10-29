@@ -53,7 +53,7 @@ type RegistryModuleVariableList struct {
 	// NOTE: At the time of authoring this comment, the API endpoint to fetch
 	// registry module variables does not support pagination. This field is
 	// included to satisfy jsonapi unmarshaler implementation here:
-	// https://github.com/shoootyou/go-tfe/blob/3d29602707fa4b10469d1a02685644bd159d3ccc/tfe.go#L859
+	// https://github.com/hashicorp/go-tfe/blob/3d29602707fa4b10469d1a02685644bd159d3ccc/tfe.go#L859
 	*Pagination
 }
 
