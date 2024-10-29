@@ -192,6 +192,7 @@ type Workspace struct {
 	SpeculativeEnabled          bool                            `jsonapi:"attr,speculative-enabled"`
 	SourceName                  string                          `jsonapi:"attr,source-name"`
 	SourceURL                   string                          `jsonapi:"attr,source-url"`
+	SourceModuleId              string                          `jsonapi:"attr,source-module-id,omitempty"`
 	StructuredRunOutputEnabled  bool                            `jsonapi:"attr,structured-run-output-enabled"`
 	TerraformVersion            string                          `jsonapi:"attr,terraform-version"`
 	TriggerPrefixes             []string                        `jsonapi:"attr,trigger-prefixes"`
