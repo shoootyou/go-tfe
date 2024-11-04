@@ -10,7 +10,7 @@ import (
 	"log"
 	"strings"
 
-	tfe "github.com/hashicorp/go-tfe"
+	tfe "github.com/shoootyou/go-tfe"
 )
 
 func main() {
