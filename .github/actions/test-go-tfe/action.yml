@@ -48,7 +48,7 @@ runs:
   using: composite
   steps:
     - name: Set up Go
-      uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
+      uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
       with:
         go-version-file: go.mod
         cache: true
@@ -61,7 +61,7 @@ runs:
 
     - name: Install gotestsum
       shell: bash
-      run: go install gotest.tools/gotestsum@latest
+      run: go install gotest.tools/gotestsum@5768fec807c3a620b209c79845e80fb4befa5857 # v1.12.2
 
     - name: Download artifact
       id: download-artifact
@@ -100,11 +100,13 @@ runs:
         GO111MODULE: "on"
         ENABLE_TFE: ${{ inputs.enterprise }}
       run: |
-        gotestsum --junitfile summary.xml --format short-verbose -- -parallel=1 -timeout=59m -run "${{ steps.test_split.outputs.run }}"
+        gotestsum --junitfile summary.xml --format short-verbose -- -parallel=1 -timeout=59m -coverprofile cover.out -run "${{ steps.test_split.outputs.run }}"
 
     - name: Upload test artifacts
-      uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
         name: junit-test-summary-${{ matrix.index }}
-        path: summary.xml
+        path: |
+          summary.xml
+          cover.out
         retention-days: 1

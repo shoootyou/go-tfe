@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+
+	"github.com/hashicorp/jsonapi"
 )
 
 // Compile-time proof of interface implementation.
@@ -26,6 +28,9 @@ type Projects interface {
 	// Read a project by its ID.
 	Read(ctx context.Context, projectID string) (*Project, error)
 
+	// ReadWithOptions a project by its ID.
+	ReadWithOptions(ctx context.Context, projectID string, options ProjectReadOptions) (*Project, error)
+
 	// Update a project.
 	Update(ctx context.Context, projectID string, options ProjectUpdateOptions) (*Project, error)
 
@@ -35,8 +40,16 @@ type Projects interface {
 	// ListTagBindings lists all tag bindings associated with the project.
 	ListTagBindings(ctx context.Context, projectID string) ([]*TagBinding, error)
 
+	// ListEffectiveTagBindings lists all tag bindings associated with the project. In practice,
+	// this should be the same as ListTagBindings since projects do not currently inherit
+	// tag bindings.
+	ListEffectiveTagBindings(ctx context.Context, workspaceID string) ([]*EffectiveTagBinding, error)
+
 	// AddTagBindings adds or modifies the value of existing tag binding keys for a project.
 	AddTagBindings(ctx context.Context, projectID string, options ProjectAddTagBindingsOptions) ([]*TagBinding, error)
+
+	// DeleteAllTagBindings removes all existing tag bindings for a project.
+	DeleteAllTagBindings(ctx context.Context, projectID string) error
 }
 
 // projects implements Projects
@@ -58,9 +71,18 @@ type Project struct {
 
 	Description string `jsonapi:"attr,description"`
 
+	AutoDestroyActivityDuration jsonapi.NullableAttr[string] `jsonapi:"attr,auto-destroy-activity-duration,omitempty"`
+
 	// Relations
-	Organization *Organization `jsonapi:"relation,organization"`
+	Organization         *Organization          `jsonapi:"relation,organization"`
+	EffectiveTagBindings []*EffectiveTagBinding `jsonapi:"relation,effective-tag-bindings"`
 }
+
+type ProjectIncludeOpt string
+
+const (
+	ProjectEffectiveTagBindings ProjectIncludeOpt = "effective_tag_bindings"
+)
 
 // ProjectListOptions represents the options for listing projects
 type ProjectListOptions struct {
@@ -77,6 +99,14 @@ type ProjectListOptions struct {
 	// Optional: A filter string to list projects filtered by key/value tags.
 	// These are not annotated and therefore not encoded by go-querystring
 	TagBindings []*TagBinding
+
+	// Optional: A list of relations to include
+	Include []ProjectIncludeOpt `url:"include,omitempty"`
+}
+
+type ProjectReadOptions struct {
+	// Optional: A list of relations to include
+	Include []ProjectIncludeOpt `url:"include,omitempty"`
 }
 
 // ProjectCreateOptions represents the options for creating a project
@@ -95,6 +125,11 @@ type ProjectCreateOptions struct {
 
 	// Associated TagBindings of the project.
 	TagBindings []*TagBinding `jsonapi:"relation,tag-bindings,omitempty"`
+
+	// Optional: For all workspaces in the project, the period of time to wait
+	// after workspace activity to trigger a destroy run. The format should roughly
+	// match a Go duration string limited to days and hours, e.g. "24h" or "1d".
+	AutoDestroyActivityDuration jsonapi.NullableAttr[string] `jsonapi:"attr,auto-destroy-activity-duration,omitempty"`
 }
 
 // ProjectUpdateOptions represents the options for updating a project
@@ -114,6 +149,11 @@ type ProjectUpdateOptions struct {
 	// Associated TagBindings of the project. Note that this will replace
 	// all existing tag bindings.
 	TagBindings []*TagBinding `jsonapi:"relation,tag-bindings,omitempty"`
+
+	// Optional: For all workspaces in the project, the period of time to wait
+	// after workspace activity to trigger a destroy run. The format should roughly
+	// match a Go duration string limited to days and hours, e.g. "24h" or "1d".
+	AutoDestroyActivityDuration jsonapi.NullableAttr[string] `jsonapi:"attr,auto-destroy-activity-duration,omitempty"`
 }
 
 // ProjectAddTagBindingsOptions represents the options for adding tag bindings
@@ -173,6 +213,27 @@ func (s *projects) Create(ctx context.Context, organization string, options Proj
 	return p, nil
 }
 
+// ReadWithOptions a project by its ID.
+func (s *projects) ReadWithOptions(ctx context.Context, projectID string, options ProjectReadOptions) (*Project, error) {
+	if !validStringID(&projectID) {
+		return nil, ErrInvalidProjectID
+	}
+
+	u := fmt.Sprintf("projects/%s", url.PathEscape(projectID))
+	req, err := s.client.NewRequest("GET", u, options)
+	if err != nil {
+		return nil, err
+	}
+
+	p := &Project{}
+	err = req.Do(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+
+	return p, nil
+}
+
 // Read a single project by its ID.
 func (s *projects) Read(ctx context.Context, projectID string) (*Project, error) {
 	if !validStringID(&projectID) {
@@ -208,6 +269,30 @@ func (s *projects) ListTagBindings(ctx context.Context, projectID string) ([]*Ta
 	var list struct {
 		*Pagination
 		Items []*TagBinding
+	}
+
+	err = req.Do(ctx, &list)
+	if err != nil {
+		return nil, err
+	}
+
+	return list.Items, nil
+}
+
+func (s *projects) ListEffectiveTagBindings(ctx context.Context, projectID string) ([]*EffectiveTagBinding, error) {
+	if !validStringID(&projectID) {
+		return nil, ErrInvalidProjectID
+	}
+
+	u := fmt.Sprintf("projects/%s/effective-tag-bindings", url.PathEscape(projectID))
+	req, err := s.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var list struct {
+		*Pagination
+		Items []*EffectiveTagBinding
 	}
 
 	err = req.Do(ctx, &list)
@@ -276,6 +361,30 @@ func (s *projects) Delete(ctx context.Context, projectID string) error {
 
 	u := fmt.Sprintf("projects/%s", url.PathEscape(projectID))
 	req, err := s.client.NewRequest("DELETE", u, nil)
+	if err != nil {
+		return err
+	}
+
+	return req.Do(ctx, nil)
+}
+
+// Delete all tag bindings associated with a project.
+func (s *projects) DeleteAllTagBindings(ctx context.Context, projectID string) error {
+	if !validStringID(&projectID) {
+		return ErrInvalidProjectID
+	}
+
+	type aliasOpts struct {
+		Type        string        `jsonapi:"primary,projects"`
+		TagBindings []*TagBinding `jsonapi:"relation,tag-bindings"`
+	}
+
+	opts := &aliasOpts{
+		TagBindings: []*TagBinding{},
+	}
+
+	u := fmt.Sprintf("projects/%s", url.PathEscape(projectID))
+	req, err := s.client.NewRequest("PATCH", u, opts)
 	if err != nil {
 		return err
 	}

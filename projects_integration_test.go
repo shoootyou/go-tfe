@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/hashicorp/jsonapi"
 )
 
 func TestProjectsList(t *testing.T) {
@@ -111,6 +113,62 @@ func TestProjectsList(t *testing.T) {
 		assert.Len(t, pl3.Items, 1)
 		assert.Contains(t, pl3.Items, p2)
 	})
+
+	t.Run("when including effective tags relationship", func(t *testing.T) {
+		skipUnlessBeta(t)
+
+		orgTest2, orgTest2Cleanup := createOrganization(t, client)
+		t.Cleanup(orgTest2Cleanup)
+
+		_, pTestCleanup1 := createProjectWithOptions(t, client, orgTest2, ProjectCreateOptions{
+			Name: randomStringWithoutSpecialChar(t),
+			TagBindings: []*TagBinding{
+				{Key: "key1", Value: "value1"},
+				{Key: "key2", Value: "value2a"},
+			},
+		})
+		t.Cleanup(pTestCleanup1)
+
+		pl, err := client.Projects.List(ctx, orgTest2.Name, &ProjectListOptions{
+			Include: []ProjectIncludeOpt{ProjectEffectiveTagBindings},
+		})
+		require.NoError(t, err)
+		require.Len(t, pl.Items, 2)
+		require.Len(t, pl.Items[0].EffectiveTagBindings, 2)
+		assert.NotEmpty(t, pl.Items[0].EffectiveTagBindings[0].Key)
+		assert.NotEmpty(t, pl.Items[0].EffectiveTagBindings[0].Value)
+		assert.NotEmpty(t, pl.Items[0].EffectiveTagBindings[1].Key)
+		assert.NotEmpty(t, pl.Items[0].EffectiveTagBindings[1].Value)
+	})
+}
+
+func TestProjectsReadWithOptions(t *testing.T) {
+	client := testClient(t)
+	ctx := context.Background()
+
+	orgTest, orgTestCleanup := createOrganization(t, client)
+	defer orgTestCleanup()
+
+	pTest, pTestCleanup := createProjectWithOptions(t, client, orgTest, ProjectCreateOptions{
+		Name: "project-with-tags",
+		TagBindings: []*TagBinding{
+			{Key: "foo", Value: "bar"},
+		},
+	})
+	defer pTestCleanup()
+
+	t.Run("when the project exists", func(t *testing.T) {
+		p, err := client.Projects.ReadWithOptions(ctx, pTest.ID, ProjectReadOptions{
+			Include: []ProjectIncludeOpt{ProjectEffectiveTagBindings},
+		})
+		require.NoError(t, err)
+		assert.Equal(t, orgTest.Name, p.Organization.Name)
+
+		// Tag data is included
+		assert.Len(t, p.EffectiveTagBindings, 1)
+		assert.Equal(t, "foo", p.EffectiveTagBindings[0].Key)
+		assert.Equal(t, "bar", p.EffectiveTagBindings[0].Value)
+	})
 }
 
 func TestProjectsRead(t *testing.T) {
@@ -149,6 +207,8 @@ func TestProjectsCreate(t *testing.T) {
 
 	orgTest, orgTestCleanup := createOrganization(t, client)
 	defer orgTestCleanup()
+
+	newSubscriptionUpdater(orgTest).WithBusinessPlan().Update(t)
 
 	t.Run("with valid options", func(t *testing.T) {
 		options := ProjectCreateOptions{
@@ -193,6 +253,17 @@ func TestProjectsCreate(t *testing.T) {
 		assert.Nil(t, w)
 		assert.EqualError(t, err, ErrInvalidOrg.Error())
 	})
+
+	t.Run("when options has an invalid auto destroy activity duration", func(t *testing.T) {
+		skipUnlessBeta(t)
+
+		w, err := client.Projects.Create(ctx, orgTest.Name, ProjectCreateOptions{
+			Name:                        "foo",
+			AutoDestroyActivityDuration: jsonapi.NewNullableAttrWithValue("20m"),
+		})
+		assert.Nil(t, w)
+		assert.Contains(t, err.Error(), "invalid attribute\n\nAuto destroy activity duration has an incorrect format, we expect up to 4 numeric digits and 1 unit ('d' or 'h')")
+	})
 }
 
 func TestProjectsUpdate(t *testing.T) {
@@ -204,7 +275,7 @@ func TestProjectsUpdate(t *testing.T) {
 
 	t.Run("with valid options", func(t *testing.T) {
 		kBefore, kTestCleanup := createProject(t, client, orgTest)
-		defer kTestCleanup()
+		t.Cleanup(kTestCleanup)
 
 		kAfter, err := client.Projects.Update(ctx, kBefore.ID, ProjectUpdateOptions{
 			Name:        String("new project name"),
@@ -226,6 +297,45 @@ func TestProjectsUpdate(t *testing.T) {
 			assert.Len(t, bindings, 1)
 			assert.Equal(t, "foo", bindings[0].Key)
 			assert.Equal(t, "bar", bindings[0].Value)
+
+			effectiveBindings, err := client.Projects.ListEffectiveTagBindings(ctx, kAfter.ID)
+			require.NoError(t, err)
+
+			assert.Len(t, effectiveBindings, 1)
+			assert.Equal(t, "foo", effectiveBindings[0].Key)
+			assert.Equal(t, "bar", effectiveBindings[0].Value)
+
+			ws, err := client.Workspaces.Create(ctx, orgTest.Name, WorkspaceCreateOptions{
+				Name:    String("new-workspace-inherits-tags"),
+				Project: kAfter,
+				TagBindings: []*TagBinding{
+					{Key: "baz", Value: "qux"},
+				},
+			})
+			require.NoError(t, err)
+
+			t.Cleanup(func() {
+				err := client.Workspaces.DeleteByID(ctx, ws.ID)
+				if err != nil {
+					t.Errorf("Error destroying workspace! WARNING: Dangling resources\n"+
+						"may exist! The full error is shown below.\n\n"+
+						"Error: %s", err)
+				}
+			})
+
+			wsEffectiveBindings, err := client.Workspaces.ListEffectiveTagBindings(ctx, ws.ID)
+			require.NoError(t, err)
+
+			assert.Len(t, wsEffectiveBindings, 2)
+			for _, b := range wsEffectiveBindings {
+				if b.Key == "foo" {
+					assert.Equal(t, "bar", b.Value)
+				} else if b.Key == "baz" {
+					assert.Equal(t, "qux", b.Value)
+				} else {
+					assert.Fail(t, "unexpected tag binding %q", b.Key)
+				}
+			}
 		}
 	})
 
@@ -244,6 +354,21 @@ func TestProjectsUpdate(t *testing.T) {
 		w, err := client.Projects.Update(ctx, badIdentifier, ProjectUpdateOptions{})
 		assert.Nil(t, w)
 		assert.EqualError(t, err, ErrInvalidProjectID.Error())
+	})
+
+	t.Run("without a valid projects auto destroy activity duration", func(t *testing.T) {
+		skipUnlessBeta(t)
+
+		newSubscriptionUpdater(orgTest).WithBusinessPlan().Update(t)
+
+		kBefore, kTestCleanup := createProject(t, client, orgTest)
+		defer kTestCleanup()
+
+		w, err := client.Projects.Update(ctx, kBefore.ID, ProjectUpdateOptions{
+			AutoDestroyActivityDuration: jsonapi.NewNullableAttrWithValue("bar"),
+		})
+		assert.Nil(t, w)
+		assert.Contains(t, err.Error(), "invalid attribute\n\nAuto destroy activity duration has an incorrect format, we expect up to 4 numeric digits and 1 unit ('d' or 'h')")
 	})
 }
 
@@ -311,6 +436,33 @@ func TestProjectsAddTagBindings(t *testing.T) {
 	})
 }
 
+func TestProjects_DeleteAllTagBindings(t *testing.T) {
+	skipUnlessBeta(t)
+
+	client := testClient(t)
+	ctx := context.Background()
+
+	pTest, wCleanup := createProject(t, client, nil)
+	t.Cleanup(wCleanup)
+
+	tagBindings := []*TagBinding{
+		{Key: "foo", Value: "bar"},
+		{Key: "baz", Value: "qux"},
+	}
+
+	_, err := client.Projects.AddTagBindings(ctx, pTest.ID, ProjectAddTagBindingsOptions{
+		TagBindings: tagBindings,
+	})
+	require.NoError(t, err)
+
+	err = client.Projects.DeleteAllTagBindings(ctx, pTest.ID)
+	require.NoError(t, err)
+
+	bindings, err := client.Projects.ListTagBindings(ctx, pTest.ID)
+	require.NoError(t, err)
+	require.Empty(t, bindings)
+}
+
 func TestProjectsDelete(t *testing.T) {
 	client := testClient(t)
 	ctx := context.Background()
@@ -337,5 +489,34 @@ func TestProjectsDelete(t *testing.T) {
 	t.Run("when the project ID is invalid", func(t *testing.T) {
 		err := client.Projects.Delete(ctx, badIdentifier)
 		assert.EqualError(t, err, ErrInvalidProjectID.Error())
+	})
+}
+
+func TestProjectsAutoDestroy(t *testing.T) {
+	skipUnlessBeta(t)
+	client := testClient(t)
+	ctx := context.Background()
+
+	orgTest, orgTestCleanup := createOrganization(t, client)
+	defer orgTestCleanup()
+
+	newSubscriptionUpdater(orgTest).WithBusinessPlan().Update(t)
+
+	t.Run("when creating workspace in project with autodestroy", func(t *testing.T) {
+		options := ProjectCreateOptions{
+			Name:                        "foo",
+			Description:                 String("qux"),
+			AutoDestroyActivityDuration: jsonapi.NewNullableAttrWithValue("3d"),
+		}
+
+		p, err := client.Projects.Create(ctx, orgTest.Name, options)
+		require.NoError(t, err)
+
+		w, _ := createWorkspaceWithOptions(t, client, orgTest, WorkspaceCreateOptions{
+			Name:    String(randomString(t)),
+			Project: p,
+		})
+
+		assert.Equal(t, p.AutoDestroyActivityDuration, w.AutoDestroyActivityDuration)
 	})
 }

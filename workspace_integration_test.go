@@ -299,6 +299,55 @@ func TestWorkspacesList(t *testing.T) {
 		assert.Contains(t, wl3.Items, w2)
 	})
 
+	t.Run("when including effective tag bindings", func(t *testing.T) {
+		skipUnlessBeta(t)
+
+		orgTest2, orgTest2Cleanup := createOrganization(t, client)
+		t.Cleanup(orgTest2Cleanup)
+
+		prj, pTestCleanup1 := createProjectWithOptions(t, client, orgTest2, ProjectCreateOptions{
+			Name: randomStringWithoutSpecialChar(t),
+			TagBindings: []*TagBinding{
+				{Key: "key3", Value: "value3"},
+			},
+		})
+		t.Cleanup(pTestCleanup1)
+
+		_, wTestCleanup1 := createWorkspaceWithOptions(t, client, orgTest2, WorkspaceCreateOptions{
+			Name:    String(randomString(t)),
+			Project: prj,
+			TagBindings: []*TagBinding{
+				{Key: "key1", Value: "value1"},
+				{Key: "key2", Value: "value2a"},
+			},
+		})
+		t.Cleanup(wTestCleanup1)
+
+		wl, err := client.Workspaces.List(ctx, orgTest2.Name, &WorkspaceListOptions{
+			Include: []WSIncludeOpt{WSEffectiveTagBindings},
+		})
+		require.NoError(t, err)
+		require.Len(t, wl.Items, 1)
+		require.Len(t, wl.Items[0].EffectiveTagBindings, 3)
+		assert.NotEmpty(t, wl.Items[0].EffectiveTagBindings[0].Key)
+		assert.NotEmpty(t, wl.Items[0].EffectiveTagBindings[0].Value)
+		assert.NotEmpty(t, wl.Items[0].EffectiveTagBindings[1].Key)
+		assert.NotEmpty(t, wl.Items[0].EffectiveTagBindings[1].Value)
+		assert.NotEmpty(t, wl.Items[0].EffectiveTagBindings[2].Key)
+		assert.NotEmpty(t, wl.Items[0].EffectiveTagBindings[2].Value)
+
+		inheritedTagsFound := 0
+		for _, tag := range wl.Items[0].EffectiveTagBindings {
+			if tag.Links["inherited-from"] != nil {
+				inheritedTagsFound += 1
+			}
+		}
+
+		if inheritedTagsFound != 1 {
+			t.Fatalf("Expected 1 inherited tag, got %d", inheritedTagsFound)
+		}
+	})
+
 	t.Run("when using project id filter and project contains workspaces", func(t *testing.T) {
 		// create a project in the orgTest
 		p, pTestCleanup := createProject(t, client, orgTest)
@@ -1237,6 +1286,33 @@ func TestWorkspacesAddTagBindings(t *testing.T) {
 	})
 }
 
+func TestWorkspaces_DeleteAllTagBindings(t *testing.T) {
+	skipUnlessBeta(t)
+
+	client := testClient(t)
+	ctx := context.Background()
+
+	wTest, wCleanup := createWorkspace(t, client, nil)
+	t.Cleanup(wCleanup)
+
+	tagBindings := []*TagBinding{
+		{Key: "foo", Value: "bar"},
+		{Key: "baz", Value: "qux"},
+	}
+
+	_, err := client.Workspaces.AddTagBindings(ctx, wTest.ID, WorkspaceAddTagBindingsOptions{
+		TagBindings: tagBindings,
+	})
+	require.NoError(t, err)
+
+	err = client.Workspaces.DeleteAllTagBindings(ctx, wTest.ID)
+	require.NoError(t, err)
+
+	bindings, err := client.Workspaces.ListTagBindings(ctx, wTest.ID)
+	require.NoError(t, err)
+	require.Empty(t, bindings)
+}
+
 func TestWorkspacesUpdate(t *testing.T) {
 	client := testClient(t)
 	ctx := context.Background()
@@ -1373,6 +1449,13 @@ func TestWorkspacesUpdate(t *testing.T) {
 			assert.Len(t, bindings, 1)
 			assert.Equal(t, "foo", bindings[0].Key)
 			assert.Equal(t, "bar", bindings[0].Value)
+
+			effectiveBindings, err := client.Workspaces.ListEffectiveTagBindings(ctx, wTest.ID)
+			require.NoError(t, err)
+
+			assert.Len(t, effectiveBindings, 1)
+			assert.Equal(t, "foo", effectiveBindings[0].Key)
+			assert.Equal(t, "bar", effectiveBindings[0].Value)
 		}
 	})
 
@@ -2954,7 +3037,7 @@ func TestWorkspacesAutoDestroy(t *testing.T) {
 	orgTest, orgTestCleanup := createOrganization(t, client)
 	t.Cleanup(orgTestCleanup)
 
-	upgradeOrganizationSubscription(t, client, orgTest)
+	newSubscriptionUpdater(orgTest).WithBusinessPlan().Update(t)
 
 	autoDestroyAt := NullableTime(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC))
 	wTest, wCleanup := createWorkspaceWithOptions(t, client, orgTest, WorkspaceCreateOptions{
@@ -2992,31 +3075,105 @@ func TestWorkspacesAutoDestroy(t *testing.T) {
 }
 
 func TestWorkspacesAutoDestroyDuration(t *testing.T) {
+	skipUnlessBeta(t)
+
 	client := testClient(t)
 	ctx := context.Background()
 
 	orgTest, orgTestCleanup := createOrganization(t, client)
 	t.Cleanup(orgTestCleanup)
 
-	upgradeOrganizationSubscription(t, client, orgTest)
+	newSubscriptionUpdater(orgTest).WithBusinessPlan().Update(t)
 
-	duration := jsonapi.NewNullableAttrWithValue("14d")
-	nilDuration := jsonapi.NewNullNullableAttr[string]()
-	nilAutoDestroy := jsonapi.NewNullNullableAttr[time.Time]()
-	wTest, wCleanup := createWorkspaceWithOptions(t, client, orgTest, WorkspaceCreateOptions{
-		Name:                        String(randomString(t)),
-		AutoDestroyActivityDuration: duration,
+	t.Run("when creating a new workspace with standalone auto destroy settings", func(t *testing.T) {
+		duration := jsonapi.NewNullableAttrWithValue("14d")
+		nilDuration := jsonapi.NewNullNullableAttr[string]()
+		nilAutoDestroy := jsonapi.NewNullNullableAttr[time.Time]()
+		wTest, wCleanup := createWorkspaceWithOptions(t, client, orgTest, WorkspaceCreateOptions{
+			Name:                        String(randomString(t)),
+			AutoDestroyActivityDuration: duration,
+			InheritsProjectAutoDestroy:  Bool(false),
+		})
+		t.Cleanup(wCleanup)
+
+		require.Equal(t, duration, wTest.AutoDestroyActivityDuration)
+		require.NotEqual(t, nilAutoDestroy, wTest.AutoDestroyAt)
+		require.Equal(t, wTest.InheritsProjectAutoDestroy, false)
+
+		w, err := client.Workspaces.Update(ctx, orgTest.Name, wTest.Name, WorkspaceUpdateOptions{
+			AutoDestroyActivityDuration: nilDuration,
+			InheritsProjectAutoDestroy:  Bool(false),
+		})
+
+		require.NoError(t, err)
+		require.False(t, w.AutoDestroyActivityDuration.IsSpecified())
+		require.False(t, w.AutoDestroyAt.IsSpecified())
+		require.Equal(t, wTest.InheritsProjectAutoDestroy, false)
 	})
-	t.Cleanup(wCleanup)
+}
 
-	require.Equal(t, duration, wTest.AutoDestroyActivityDuration)
-	require.NotEqual(t, nilAutoDestroy, wTest.AutoDestroyAt)
+func TestWorkspaces_effectiveTagBindingsInheritedFrom(t *testing.T) {
+	skipUnlessBeta(t)
 
-	w, err := client.Workspaces.Update(ctx, orgTest.Name, wTest.Name, WorkspaceUpdateOptions{
-		AutoDestroyActivityDuration: nilDuration,
+	client := testClient(t)
+	ctx := context.Background()
+
+	orgTest, orgTestCleanup := createOrganization(t, client)
+	t.Cleanup(orgTestCleanup)
+
+	projTest, projTestCleanup := createProject(t, client, orgTest)
+	t.Cleanup(projTestCleanup)
+
+	ws, wsCleanup := createWorkspaceWithOptions(t, client, orgTest, WorkspaceCreateOptions{
+		Name:    String("mycoolworkspace"),
+		Project: projTest,
 	})
+	t.Cleanup(wsCleanup)
 
+	_, err := client.Workspaces.AddTagBindings(ctx, ws.ID, WorkspaceAddTagBindingsOptions{
+		TagBindings: []*TagBinding{
+			{
+				Key:   "a",
+				Value: "1",
+			},
+			{
+				Key:   "b",
+				Value: "2",
+			},
+		},
+	})
 	require.NoError(t, err)
-	require.False(t, w.AutoDestroyActivityDuration.IsSpecified())
-	require.False(t, w.AutoDestroyAt.IsSpecified())
+
+	t.Run("when no tags are inherited from the project", func(t *testing.T) {
+		effectiveBindings, err := client.Workspaces.ListEffectiveTagBindings(ctx, ws.ID)
+		require.NoError(t, err)
+
+		for _, binding := range effectiveBindings {
+			require.Nil(t, binding.Links)
+		}
+	})
+
+	t.Run("when tags are inherited from the project", func(t *testing.T) {
+		_, err := client.Projects.AddTagBindings(ctx, projTest.ID, ProjectAddTagBindingsOptions{
+			TagBindings: []*TagBinding{
+				{
+					Key:   "inherited",
+					Value: "foo",
+				},
+			},
+		})
+		require.NoError(t, err)
+
+		effectiveBindings, err := client.Workspaces.ListEffectiveTagBindings(ctx, ws.ID)
+		require.NoError(t, err)
+
+		for _, binding := range effectiveBindings {
+			if binding.Key == "inherited" {
+				require.NotNil(t, binding.Links)
+				require.NotNil(t, binding.Links["inherited-from"])
+			} else {
+				require.Nil(t, binding.Links)
+			}
+		}
+	})
 }

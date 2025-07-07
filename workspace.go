@@ -135,8 +135,15 @@ type Workspaces interface {
 	// ListTagBindings lists all tag bindings associated with the workspace.
 	ListTagBindings(ctx context.Context, workspaceID string) ([]*TagBinding, error)
 
+	// ListEffectiveTagBindings lists all tag bindings associated with the workspace which may be
+	// either inherited from a project or binded to the workspace itself.
+	ListEffectiveTagBindings(ctx context.Context, workspaceID string) ([]*EffectiveTagBinding, error)
+
 	// AddTagBindings adds or modifies the value of existing tag binding keys for a workspace.
 	AddTagBindings(ctx context.Context, workspaceID string, options WorkspaceAddTagBindingsOptions) ([]*TagBinding, error)
+
+	// DeleteAllTagBindings removes all tag bindings for a workspace.
+	DeleteAllTagBindings(ctx context.Context, workspaceID string) error
 }
 
 // workspaces implements Workspaces.
@@ -182,6 +189,7 @@ type Workspace struct {
 	ExecutionMode               string                          `jsonapi:"attr,execution-mode"`
 	FileTriggersEnabled         bool                            `jsonapi:"attr,file-triggers-enabled"`
 	GlobalRemoteState           bool                            `jsonapi:"attr,global-remote-state"`
+	InheritsProjectAutoDestroy  bool                            `jsonapi:"attr,inherits-project-auto-destroy"`
 	Locked                      bool                            `jsonapi:"attr,locked"`
 	MigrationEnvironment        string                          `jsonapi:"attr,migration-environment"`
 	Name                        string                          `jsonapi:"attr,name"`
@@ -210,18 +218,19 @@ type Workspace struct {
 	SettingOverwrites           *WorkspaceSettingOverwrites     `jsonapi:"attr,setting-overwrites"`
 
 	// Relations
-	AgentPool                   *AgentPool            `jsonapi:"relation,agent-pool"`
-	CurrentRun                  *Run                  `jsonapi:"relation,current-run"`
-	CurrentStateVersion         *StateVersion         `jsonapi:"relation,current-state-version"`
-	Organization                *Organization         `jsonapi:"relation,organization"`
-	SSHKey                      *SSHKey               `jsonapi:"relation,ssh-key"`
-	Outputs                     []*WorkspaceOutputs   `jsonapi:"relation,outputs"`
-	Project                     *Project              `jsonapi:"relation,project"`
-	Tags                        []*Tag                `jsonapi:"relation,tags"`
-	CurrentConfigurationVersion *ConfigurationVersion `jsonapi:"relation,current-configuration-version,omitempty"`
-	LockedBy                    *LockedByChoice       `jsonapi:"polyrelation,locked-by"`
-	Variables                   []*Variable           `jsonapi:"relation,vars"`
-	TagBindings                 []*TagBinding         `jsonapi:"relation,tag-bindings"`
+	AgentPool                   *AgentPool             `jsonapi:"relation,agent-pool"`
+	CurrentRun                  *Run                   `jsonapi:"relation,current-run"`
+	CurrentStateVersion         *StateVersion          `jsonapi:"relation,current-state-version"`
+	Organization                *Organization          `jsonapi:"relation,organization"`
+	SSHKey                      *SSHKey                `jsonapi:"relation,ssh-key"`
+	Outputs                     []*WorkspaceOutputs    `jsonapi:"relation,outputs"`
+	Project                     *Project               `jsonapi:"relation,project"`
+	Tags                        []*Tag                 `jsonapi:"relation,tags"`
+	CurrentConfigurationVersion *ConfigurationVersion  `jsonapi:"relation,current-configuration-version,omitempty"`
+	LockedBy                    *LockedByChoice        `jsonapi:"polyrelation,locked-by"`
+	Variables                   []*Variable            `jsonapi:"relation,vars"`
+	TagBindings                 []*TagBinding          `jsonapi:"relation,tag-bindings"`
+	EffectiveTagBindings        []*EffectiveTagBinding `jsonapi:"relation,effective-tag-bindings"`
 
 	// Deprecated: Use DataRetentionPolicyChoice instead.
 	DataRetentionPolicy *DataRetentionPolicy
@@ -307,6 +316,7 @@ const (
 	WSCurrentRunPlan             WSIncludeOpt = "current_run.plan"
 	WSCurrentRunConfigVer        WSIncludeOpt = "current_run.configuration_version"
 	WSCurrentrunConfigVerIngress WSIncludeOpt = "current_run.configuration_version.ingress_attributes"
+	WSEffectiveTagBindings       WSIncludeOpt = "effective_tag_bindings"
 	WSLockedBy                   WSIncludeOpt = "locked_by"
 	WSReadme                     WSIncludeOpt = "readme"
 	WSOutputs                    WSIncludeOpt = "outputs"
@@ -389,6 +399,9 @@ type WorkspaceCreateOptions struct {
 	// Optional: The period of time to wait after workspace activity to trigger a destroy run. The format
 	// should roughly match a Go duration string limited to days and hours, e.g. "24h" or "1d".
 	AutoDestroyActivityDuration jsonapi.NullableAttr[string] `jsonapi:"attr,auto-destroy-activity-duration,omitempty"`
+
+	// Optional: Whether the workspace inherits auto destroy settings from the project
+	InheritsProjectAutoDestroy *bool `jsonapi:"attr,inherits-project-auto-destroy,omitempty"`
 
 	// Optional: A description for the workspace.
 	Description *string `jsonapi:"attr,description,omitempty"`
@@ -546,6 +559,9 @@ type WorkspaceUpdateOptions struct {
 	// Optional: The period of time to wait after workspace activity to trigger a destroy run. The format
 	// should roughly match a Go duration string limited to days and hours, e.g. "24h" or "1d".
 	AutoDestroyActivityDuration jsonapi.NullableAttr[string] `jsonapi:"attr,auto-destroy-activity-duration,omitempty"`
+
+	// Optional: Whether the workspace inherits auto destroy settings from the project
+	InheritsProjectAutoDestroy *bool `jsonapi:"attr,inherits-project-auto-destroy,omitempty"`
 
 	// Optional: A new name for the workspace, which can only include letters, numbers, -,
 	// and _. This will be used as an identifier and must be unique in the
@@ -770,6 +786,30 @@ func (s *workspaces) ListTagBindings(ctx context.Context, workspaceID string) ([
 	return list.Items, nil
 }
 
+func (s *workspaces) ListEffectiveTagBindings(ctx context.Context, workspaceID string) ([]*EffectiveTagBinding, error) {
+	if !validStringID(&workspaceID) {
+		return nil, ErrInvalidWorkspaceID
+	}
+
+	u := fmt.Sprintf("workspaces/%s/effective-tag-bindings", url.PathEscape(workspaceID))
+	req, err := s.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var list struct {
+		*Pagination
+		Items []*EffectiveTagBinding
+	}
+
+	err = req.Do(ctx, &list)
+	if err != nil {
+		return nil, err
+	}
+
+	return list.Items, nil
+}
+
 // AddTagBindings adds or modifies the value of existing tag binding keys for a workspace.
 func (s *workspaces) AddTagBindings(ctx context.Context, workspaceID string, options WorkspaceAddTagBindingsOptions) ([]*TagBinding, error) {
 	if !validStringID(&workspaceID) {
@@ -793,6 +833,32 @@ func (s *workspaces) AddTagBindings(ctx context.Context, workspaceID string, opt
 	err = req.Do(ctx, &response)
 
 	return response.Items, err
+}
+
+// DeleteAllTagBindings removes all tag bindings associated with a workspace.
+// This method will not remove any inherited tag bindings, which must be
+// explicitly removed from the parent project.
+func (s *workspaces) DeleteAllTagBindings(ctx context.Context, workspaceID string) error {
+	if !validStringID(&workspaceID) {
+		return ErrInvalidWorkspaceID
+	}
+
+	type aliasOpts struct {
+		Type        string        `jsonapi:"primary,workspaces"`
+		TagBindings []*TagBinding `jsonapi:"relation,tag-bindings"`
+	}
+
+	opts := &aliasOpts{
+		TagBindings: []*TagBinding{},
+	}
+
+	u := fmt.Sprintf("workspaces/%s", url.PathEscape(workspaceID))
+	req, err := s.client.NewRequest("PATCH", u, opts)
+	if err != nil {
+		return err
+	}
+
+	return req.Do(ctx, nil)
 }
 
 // Create is used to create a new workspace.

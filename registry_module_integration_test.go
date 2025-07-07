@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	slug "github.com/hashicorp/go-slug"
@@ -61,6 +62,31 @@ func TestRegistryModulesList(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEmpty(t, modl.Items)
 		assert.Equal(t, 1, modl.CurrentPage)
+	})
+
+	t.Run("include no-code modules", func(t *testing.T) {
+		options := RegistryModuleCreateOptions{
+			Name:         String("iam"),
+			Provider:     String("aws"),
+			NoCode:       Bool(true),
+			RegistryName: PrivateRegistry,
+		}
+		rm, err := client.RegistryModules.Create(ctx, orgTest.Name, options)
+		require.NoError(t, err)
+
+		modl, err := client.RegistryModules.List(ctx, orgTest.Name, &RegistryModuleListOptions{
+			Include: []RegistryModuleListIncludeOpt{
+				IncludeNoCodeModules,
+			},
+		})
+		require.NoError(t, err)
+		assert.Len(t, modl.Items, 3)
+		for _, m := range modl.Items {
+			if m.ID == rm.ID {
+				assert.True(t, m.NoCode)
+				assert.Len(t, m.RegistryNoCodeModule, 1)
+			}
+		}
 	})
 }
 
@@ -1298,6 +1324,126 @@ func TestRegistryModulesRead(t *testing.T) {
 	})
 }
 
+func TestRegistryModulesReadTerraformRegistryModule(t *testing.T) {
+	client := testClient(t)
+	ctx := context.Background()
+	r := require.New(t)
+
+	githubIdentifier := os.Getenv("GITHUB_REGISTRY_NO_CODE_MODULE_IDENTIFIER")
+	if githubIdentifier == "" {
+		t.Skip("Export a valid GITHUB_REGISTRY_NO_CODE_MODULE_IDENTIFIER before running this test")
+	}
+
+	// NOTE: These test cases use time.Sleep to wait for the module to be ready,
+	// an enhancement to these test cases would be to use a polling mechanism to
+	// check if the module is ready, and then time out if it is not ready after a
+	// certain amount of time.
+
+	t.Run("fetch module from private registry", func(t *testing.T) {
+		orgTest, orgTestCleanup := createOrganization(t, client)
+		defer orgTestCleanup()
+
+		token, cleanupToken := createOAuthToken(t, client, orgTest)
+		defer cleanupToken()
+
+		rmOpts := RegistryModuleCreateWithVCSConnectionOptions{
+			VCSRepo: &RegistryModuleVCSRepoOptions{
+				OrganizationName:  String(orgTest.Name),
+				Identifier:        String(githubIdentifier),
+				Tags:              Bool(true),
+				OAuthTokenID:      String(token.ID),
+				DisplayIdentifier: String(githubIdentifier),
+			},
+		}
+
+		version := "1.0.0"
+		rm, err := client.RegistryModules.CreateWithVCSConnection(ctx, rmOpts)
+		r.NoError(err)
+
+		time.Sleep(time.Second * 10)
+
+		rmID := RegistryModuleID{
+			Organization: orgTest.Name,
+			Name:         rm.Name,
+			Provider:     rm.Provider,
+			Namespace:    rm.Namespace,
+			RegistryName: rm.RegistryName,
+		}
+		tfm, err := client.RegistryModules.ReadTerraformRegistryModule(ctx, rmID, version)
+		r.NoError(err)
+		r.NotNil(tfm)
+		r.Equal(fmt.Sprintf("%s/%s/%s/%s", orgTest.Name, rm.Name, rm.Provider, version), tfm.ID)
+		r.Equal(rm.Name, tfm.Name)
+		r.Equal("A test Terraform module for use in CI pipelines", tfm.Description)
+		r.Equal(rm.Provider, tfm.Provider)
+		r.Equal(rm.Namespace, tfm.Namespace)
+		r.Equal(version, tfm.Version)
+		r.Equal("", tfm.Tag)
+		r.Equal(0, tfm.Downloads)
+		r.False(tfm.Verified)
+		r.NotNil(tfm.Root)
+		r.Equal(rm.Name, tfm.Root.Name)
+		r.Equal("", tfm.Root.Readme)
+		r.False(tfm.Root.Empty)
+		r.Len(tfm.Root.Inputs, 1)
+		r.Len(tfm.Root.Outputs, 1)
+		r.Len(tfm.Root.ProviderDependencies, 1)
+		r.Len(tfm.Root.Resources, 1)
+	})
+
+	t.Run("fetch module from public registry", func(t *testing.T) {
+		orgTest, orgTestCleanup := createOrganization(t, client)
+		defer orgTestCleanup()
+
+		token, cleanupToken := createOAuthToken(t, client, orgTest)
+		defer cleanupToken()
+
+		rmOpts := RegistryModuleCreateWithVCSConnectionOptions{
+			VCSRepo: &RegistryModuleVCSRepoOptions{
+				OrganizationName:  String(orgTest.Name),
+				Identifier:        String(githubIdentifier),
+				Tags:              Bool(true),
+				OAuthTokenID:      String(token.ID),
+				DisplayIdentifier: String(githubIdentifier),
+			},
+		}
+
+		version := "1.0.0"
+		rm, err := client.RegistryModules.CreateWithVCSConnection(ctx, rmOpts)
+		r.NoError(err)
+
+		time.Sleep(time.Second * 10)
+
+		rmID := RegistryModuleID{
+			Organization: orgTest.Name,
+			Name:         rm.Name,
+			Provider:     rm.Provider,
+			Namespace:    rm.Namespace,
+			RegistryName: rm.RegistryName,
+		}
+		tfm, err := client.RegistryModules.ReadTerraformRegistryModule(ctx, rmID, version)
+		r.NoError(err)
+		r.NotNil(tfm)
+		r.Equal(fmt.Sprintf("%s/%s/%s/%s", orgTest.Name, rm.Name, rm.Provider, version), tfm.ID)
+		r.Equal(rm.Name, tfm.Name)
+		r.Equal("A test Terraform module for use in CI pipelines", tfm.Description)
+		r.Equal(rm.Provider, tfm.Provider)
+		r.Equal(rm.Namespace, tfm.Namespace)
+		r.Equal(version, tfm.Version)
+		r.Equal("", tfm.Tag)
+		r.Equal(0, tfm.Downloads)
+		r.False(tfm.Verified)
+		r.NotNil(tfm.Root)
+		r.Equal(rm.Name, tfm.Root.Name)
+		r.Equal("", tfm.Root.Readme)
+		r.False(tfm.Root.Empty)
+		r.Len(tfm.Root.Inputs, 1)
+		r.Len(tfm.Root.Outputs, 1)
+		r.Len(tfm.Root.ProviderDependencies, 1)
+		r.Len(tfm.Root.Resources, 1)
+	})
+}
+
 func TestRegistryModulesDelete(t *testing.T) {
 	client := testClient(t)
 	ctx := context.Background()
@@ -1738,7 +1884,6 @@ func TestRegistryModulesUploadTarGzip(t *testing.T) {
 		packer, err := slug.NewPacker(
 			slug.DereferenceSymlinks(),
 			slug.ApplyTerraformIgnore(),
-			slug.AllowSymlinkTarget("/target/symlink/path/foo"),
 		)
 		require.NoError(t, err)
 

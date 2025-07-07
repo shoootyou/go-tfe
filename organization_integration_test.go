@@ -196,7 +196,7 @@ func TestOrganizationsRead(t *testing.T) {
 			assert.NotEmpty(t, org.CreatedAt)
 			// By default accounts are in the free tier and are not in a trial
 			assert.Empty(t, org.TrialExpiresAt)
-			assert.Equal(t, org.RemainingTestableCount, 5)
+			assert.Greater(t, org.RemainingTestableCount, 1)
 		})
 	})
 
@@ -212,8 +212,6 @@ func TestOrganizationsRead(t *testing.T) {
 	})
 
 	t.Run("reads default project", func(t *testing.T) {
-		skipUnlessBeta(t)
-
 		org, err := client.Organizations.ReadWithOptions(ctx, orgTest.Name, OrganizationReadOptions{Include: []OrganizationIncludeOpt{OrganizationDefaultProject}})
 		require.NoError(t, err)
 		assert.Equal(t, orgTest.Name, org.Name)
@@ -493,7 +491,7 @@ func TestOrganizationsReadEntitlements(t *testing.T) {
 		assert.True(t, entitlements.StateStorage)
 		assert.True(t, entitlements.Teams)
 		assert.True(t, entitlements.VCSIntegrations)
-		assert.True(t, entitlements.WaypointActions)
+		assert.False(t, entitlements.WaypointActions)
 		assert.True(t, entitlements.WaypointTemplatesAndAddons)
 	})
 

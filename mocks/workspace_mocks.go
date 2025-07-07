@@ -128,6 +128,20 @@ func (mr *MockWorkspacesMockRecorder) Delete(ctx, organization, workspace any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockWorkspaces)(nil).Delete), ctx, organization, workspace)
 }
 
+// DeleteAllTagBindings mocks base method.
+func (m *MockWorkspaces) DeleteAllTagBindings(ctx context.Context, workspaceID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAllTagBindings", ctx, workspaceID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAllTagBindings indicates an expected call of DeleteAllTagBindings.
+func (mr *MockWorkspacesMockRecorder) DeleteAllTagBindings(ctx, workspaceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAllTagBindings", reflect.TypeOf((*MockWorkspaces)(nil).DeleteAllTagBindings), ctx, workspaceID)
+}
+
 // DeleteByID mocks base method.
 func (m *MockWorkspaces) DeleteByID(ctx context.Context, workspaceID string) error {
 	m.ctrl.T.Helper()
@@ -184,6 +198,21 @@ func (m *MockWorkspaces) List(ctx context.Context, organization string, options 
 func (mr *MockWorkspacesMockRecorder) List(ctx, organization, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockWorkspaces)(nil).List), ctx, organization, options)
+}
+
+// ListEffectiveTagBindings mocks base method.
+func (m *MockWorkspaces) ListEffectiveTagBindings(ctx context.Context, workspaceID string) ([]*tfe.EffectiveTagBinding, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEffectiveTagBindings", ctx, workspaceID)
+	ret0, _ := ret[0].([]*tfe.EffectiveTagBinding)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEffectiveTagBindings indicates an expected call of ListEffectiveTagBindings.
+func (mr *MockWorkspacesMockRecorder) ListEffectiveTagBindings(ctx, workspaceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEffectiveTagBindings", reflect.TypeOf((*MockWorkspaces)(nil).ListEffectiveTagBindings), ctx, workspaceID)
 }
 
 // ListRemoteStateConsumers mocks base method.

@@ -31,7 +31,7 @@ func TestStackCreateAndList(t *testing.T) {
 
 	stack1, err := client.Stacks.Create(ctx, StackCreateOptions{
 		Name: "aa-test-stack",
-		VCSRepo: &StackVCSRepo{
+		VCSRepo: &StackVCSRepoOptions{
 			Identifier:   "hashicorp-guides/pet-nulls-stack",
 			OAuthTokenID: oauthClient.OAuthTokens[0].ID,
 		},
@@ -45,7 +45,7 @@ func TestStackCreateAndList(t *testing.T) {
 
 	stack2, err := client.Stacks.Create(ctx, StackCreateOptions{
 		Name: "zz-test-stack",
-		VCSRepo: &StackVCSRepo{
+		VCSRepo: &StackVCSRepoOptions{
 			Identifier:   "hashicorp-guides/pet-nulls-stack",
 			OAuthTokenID: oauthClient.OAuthTokens[0].ID,
 		},
@@ -143,7 +143,7 @@ func TestStackReadUpdateDelete(t *testing.T) {
 
 	stack, err := client.Stacks.Create(ctx, StackCreateOptions{
 		Name: "test-stack",
-		VCSRepo: &StackVCSRepo{
+		VCSRepo: &StackVCSRepoOptions{
 			Identifier:   "brandonc/pet-nulls-stack",
 			OAuthTokenID: oauthClient.OAuthTokens[0].ID,
 			Branch:       "main",
@@ -169,6 +169,11 @@ func TestStackReadUpdateDelete(t *testing.T) {
 
 	stackUpdated, err := client.Stacks.Update(ctx, stack.ID, StackUpdateOptions{
 		Description: String("updated description"),
+		VCSRepo: &StackVCSRepoOptions{
+			Identifier:   "brandonc/pet-nulls-stack",
+			OAuthTokenID: oauthClient.OAuthTokens[0].ID,
+			Branch:       "main",
+		},
 	})
 
 	require.NoError(t, err)
@@ -186,6 +191,52 @@ func TestStackReadUpdateDelete(t *testing.T) {
 	require.Nil(t, stackReadAfterDelete)
 }
 
+func TestStackRemoveVCSBacking(t *testing.T) {
+	skipUnlessBeta(t)
+
+	client := testClient(t)
+	ctx := context.Background()
+
+	orgTest, orgTestCleanup := createOrganization(t, client)
+	t.Cleanup(orgTestCleanup)
+
+	oauthClient, cleanup := createOAuthClient(t, client, orgTest, nil)
+	t.Cleanup(cleanup)
+
+	stack, err := client.Stacks.Create(ctx, StackCreateOptions{
+		Name: "test-stack",
+		VCSRepo: &StackVCSRepoOptions{
+			Identifier:   "brandonc/pet-nulls-stack",
+			OAuthTokenID: oauthClient.OAuthTokens[0].ID,
+			Branch:       "main",
+		},
+		Project: &Project{
+			ID: orgTest.DefaultProject.ID,
+		},
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, stack)
+	require.NotEmpty(t, stack.VCSRepo.Identifier)
+	require.NotEmpty(t, stack.VCSRepo.OAuthTokenID)
+	require.NotEmpty(t, stack.VCSRepo.Branch)
+
+	stackRead, err := client.Stacks.Read(ctx, stack.ID, nil)
+	require.NoError(t, err)
+	require.Equal(t, stack.VCSRepo.Identifier, stackRead.VCSRepo.Identifier)
+	require.Equal(t, stack.VCSRepo.OAuthTokenID, stackRead.VCSRepo.OAuthTokenID)
+	require.Equal(t, stack.VCSRepo.Branch, stackRead.VCSRepo.Branch)
+
+	assert.Equal(t, stack, stackRead)
+
+	stackUpdated, err := client.Stacks.Update(ctx, stack.ID, StackUpdateOptions{
+		VCSRepo: nil,
+	})
+
+	require.NoError(t, err)
+	require.Nil(t, stackUpdated.VCSRepo)
+}
+
 func TestStackReadUpdateForceDelete(t *testing.T) {
 	skipUnlessBeta(t)
 
@@ -200,7 +251,7 @@ func TestStackReadUpdateForceDelete(t *testing.T) {
 
 	stack, err := client.Stacks.Create(ctx, StackCreateOptions{
 		Name: "test-stack",
-		VCSRepo: &StackVCSRepo{
+		VCSRepo: &StackVCSRepoOptions{
 			Identifier:   "brandonc/pet-nulls-stack",
 			OAuthTokenID: oauthClient.OAuthTokens[0].ID,
 			Branch:       "main",
@@ -226,6 +277,11 @@ func TestStackReadUpdateForceDelete(t *testing.T) {
 
 	stackUpdated, err := client.Stacks.Update(ctx, stack.ID, StackUpdateOptions{
 		Description: String("updated description"),
+		VCSRepo: &StackVCSRepoOptions{
+			Identifier:   "brandonc/pet-nulls-stack",
+			OAuthTokenID: oauthClient.OAuthTokens[0].ID,
+			Branch:       "main",
+		},
 	})
 
 	require.NoError(t, err)
@@ -356,7 +412,7 @@ func TestStackConverged(t *testing.T) {
 
 	stack, err := client.Stacks.Create(ctx, StackCreateOptions{
 		Name: "test-stack",
-		VCSRepo: &StackVCSRepo{
+		VCSRepo: &StackVCSRepoOptions{
 			Identifier:   "brandonc/pet-nulls-stack",
 			OAuthTokenID: oauthClient.OAuthTokens[0].ID,
 		},

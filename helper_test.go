@@ -615,6 +615,55 @@ func createNotificationConfiguration(t *testing.T, client *Client, w *Workspace,
 	}
 }
 
+func createTeamNotificationConfiguration(t *testing.T, client *Client, team *Team, options *NotificationConfigurationCreateOptions) (*NotificationConfiguration, func()) {
+	var tCleanup func()
+
+	if team == nil {
+		team, tCleanup = createTeam(t, client, nil)
+	}
+
+	// Team notification configurations do not actually require a run task, but we'll
+	// reuse this as a URL that returns a 200.
+	runTaskURL := os.Getenv("TFC_RUN_TASK_URL")
+	if runTaskURL == "" {
+		t.Error("You must set TFC_RUN_TASK_URL for run task related tests.")
+	}
+
+	if options == nil {
+		options = &NotificationConfigurationCreateOptions{
+			DestinationType:    NotificationDestination(NotificationDestinationTypeGeneric),
+			Enabled:            Bool(false),
+			Name:               String(randomString(t)),
+			Token:              String(randomString(t)),
+			URL:                String(runTaskURL),
+			Triggers:           []NotificationTriggerType{NotificationTriggerChangeRequestCreated},
+			SubscribableChoice: &NotificationConfigurationSubscribableChoice{Team: team},
+		}
+	}
+
+	ctx := context.Background()
+	nc, err := client.NotificationConfigurations.Create(
+		ctx,
+		team.ID,
+		*options,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return nc, func() {
+		if err := client.NotificationConfigurations.Delete(ctx, nc.ID); err != nil {
+			t.Errorf("Error destroying team notification configuration! WARNING: Dangling\n"+
+				"resources may exist! The full error is shown below.\n\n"+
+				"NotificationConfiguration: %s\nError: %s", nc.ID, err)
+		}
+
+		if tCleanup != nil {
+			tCleanup()
+		}
+	}
+}
+
 func createPolicySetParameter(t *testing.T, client *Client, ps *PolicySet) (*PolicySetParameter, func()) {
 	var psCleanup func()
 
@@ -951,7 +1000,7 @@ func createOrganizationWithOptions(t *testing.T, client *Client, options Organiz
 
 	return org, func() {
 		if err := client.Organizations.Delete(ctx, org.Name); err != nil {
-			t.Errorf("Error destroying organization! WARNING: Dangling resources\n"+
+			t.Logf("Error destroying organization! WARNING: Dangling resources\n"+
 				"may exist! The full error is shown below.\n\n"+
 				"Organization: %s\nError: %s", org.Name, err)
 		}
@@ -1108,7 +1157,7 @@ func createPolicyCheckedRun(t *testing.T, client *Client, w *Workspace) (*Run, f
 }
 
 func createPlannedRun(t *testing.T, client *Client, w *Workspace) (*Run, func()) {
-	return createRunWaitForStatus(t, client, w, RunCostEstimated)
+	return createRunWaitForAnyStatuses(t, client, w, []RunStatus{RunCostEstimated, RunPlanned})
 }
 
 func createCostEstimatedRun(t *testing.T, client *Client, w *Workspace) (*Run, func()) {
@@ -2147,7 +2196,7 @@ func createTeamTokenWithOptions(t *testing.T, client *Client, tm *Team, options 
 	}
 
 	return tt, func() {
-		if err := client.TeamTokens.Delete(ctx, tm.ID); err != nil {
+		if err := client.TeamTokens.DeleteByID(ctx, tt.ID); err != nil {
 			t.Errorf("Error destroying team token! WARNING: Dangling resources\n"+
 				"may exist! The full error is shown below.\n\n"+
 				"TeamToken: %s\nError: %s", tm.ID, err)
@@ -2160,19 +2209,48 @@ func createTeamTokenWithOptions(t *testing.T, client *Client, tm *Team, options 
 }
 
 func createVariable(t *testing.T, client *Client, w *Workspace) (*Variable, func()) {
+	options := VariableCreateOptions{
+		Key:         String(randomString(t)),
+		Value:       String(randomString(t)),
+		Category:    Category(CategoryTerraform),
+		Description: String(randomString(t)),
+	}
+	return createVariableWithOptions(t, client, w, options)
+}
+
+func createVariableWithOptions(t *testing.T, client *Client, w *Workspace, options VariableCreateOptions) (*Variable, func()) {
 	var wCleanup func()
 
 	if w == nil {
 		w, wCleanup = createWorkspace(t, client, nil)
 	}
 
+	if options.Key == nil {
+		options.Key = String(randomString(t))
+	}
+
+	if options.Value == nil {
+		options.Value = String(randomString(t))
+	}
+
+	if options.Description == nil {
+		options.Description = String(randomString(t))
+	}
+
+	if options.Category == nil {
+		options.Category = Category(CategoryTerraform)
+	}
+
+	if options.HCL == nil {
+		options.HCL = Bool(false)
+	}
+
+	if options.Sensitive == nil {
+		options.Sensitive = Bool(false)
+	}
+
 	ctx := context.Background()
-	v, err := client.Variables.Create(ctx, w.ID, VariableCreateOptions{
-		Key:         String(randomString(t)),
-		Value:       String(randomString(t)),
-		Category:    Category(CategoryTerraform),
-		Description: String(randomString(t)),
-	})
+	v, err := client.Variables.Create(ctx, w.ID, options)
 	if err != nil {
 		t.Fatal(err)
 	}
