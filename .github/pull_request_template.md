@@ -1,5 +1,5 @@
 <!--
-Thank you for contributing to hashicorp/go-tfe! Please read docs/CONTRIBUTING.md for detailed information when preparing your change.
+Thank you for contributing to shoootyou/go-tfe! Please read docs/CONTRIBUTING.md for detailed information when preparing your change.
 
 Here's what to expect after the pull request is opened:
 

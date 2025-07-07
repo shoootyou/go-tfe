@@ -1,11 +1,11 @@
 HCP Terraform and Terraform Enterprise Go Client
 ==============================
 
-[![Tests](https://github.com/hashicorp/go-tfe/actions/workflows/ci.yml/badge.svg)](https://github.com/hashicorp/go-tfe/actions/workflows/ci.yml)
-[![GitHub license](https://img.shields.io/github/license/hashicorp/go-tfe.svg)](https://github.com/hashicorp/go-tfe/blob/main/LICENSE)
-[![GoDoc](https://godoc.org/github.com/hashicorp/go-tfe?status.svg)](https://godoc.org/github.com/hashicorp/go-tfe)
-[![Go Report Card](https://goreportcard.com/badge/github.com/hashicorp/go-tfe)](https://goreportcard.com/report/github.com/hashicorp/go-tfe)
-[![GitHub issues](https://img.shields.io/github/issues/hashicorp/go-tfe.svg)](https://github.com/hashicorp/go-tfe/issues)
+[![Tests](https://github.com/shoootyou/go-tfe/actions/workflows/ci.yml/badge.svg)](https://github.com/shoootyou/go-tfe/actions/workflows/ci.yml)
+[![GitHub license](https://img.shields.io/github/license/shoootyou/go-tfe.svg)](https://github.com/shoootyou/go-tfe/blob/main/LICENSE)
+[![GoDoc](https://godoc.org/github.com/shoootyou/go-tfe?status.svg)](https://godoc.org/github.com/shoootyou/go-tfe)
+[![Go Report Card](https://goreportcard.com/badge/github.com/shoootyou/go-tfe)](https://goreportcard.com/report/github.com/shoootyou/go-tfe)
+[![GitHub issues](https://img.shields.io/github/issues/shoootyou/go-tfe.svg)](https://github.com/shoootyou/go-tfe/issues)
 
 The official Go API client for [HCP Terraform and Terraform Enterprise](https://www.hashicorp.com/products/terraform).
 
@@ -33,7 +33,7 @@ import (
   "context"
   "log"
 
-  "github.com/hashicorp/go-tfe"
+  "github.com/shoootyou/go-tfe"
 )
 
 config := &tfe.Config{
@@ -69,7 +69,7 @@ import (
   "context"
   "log"
 
-  "github.com/hashicorp/go-tfe"
+  "github.com/shoootyou/go-tfe"
 )
 
 // Passing nil to tfe.NewClient method will also use the default configuration
@@ -90,7 +90,7 @@ import (
   "context"
   "log"
 
-  "github.com/hashicorp/go-tfe"
+  "github.com/shoootyou/go-tfe"
 )
 
 config := &tfe.Config{
@@ -111,11 +111,11 @@ if err != nil {
 
 ## Documentation
 
-For complete usage of the API client, see the [full package docs](https://pkg.go.dev/github.com/hashicorp/go-tfe).
+For complete usage of the API client, see the [full package docs](https://pkg.go.dev/github.com/shoootyou/go-tfe).
 
 ## Examples
 
-See the [examples directory](https://github.com/hashicorp/go-tfe/tree/main/examples).
+See the [examples directory](https://github.com/shoootyou/go-tfe/tree/main/examples).
 
 ## Running tests
 
