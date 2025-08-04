@@ -1,9 +1,0 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
-version: 2
-updates:
-- package-ecosystem: gomod
-  directory: "/"
-  schedule:
-    interval: daily
