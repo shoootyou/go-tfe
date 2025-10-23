@@ -123,74 +123,84 @@ type Client struct {
 	remoteTFEVersion  string
 	appName           string
 
-	Admin                      Admin
-	Agents                     Agents
-	AgentPools                 AgentPools
-	AgentTokens                AgentTokens
-	Applies                    Applies
-	AuditTrails                AuditTrails
-	Comments                   Comments
-	ConfigurationVersions      ConfigurationVersions
-	CostEstimates              CostEstimates
-	GHAInstallations           GHAInstallations
-	GPGKeys                    GPGKeys
-	NotificationConfigurations NotificationConfigurations
-	OAuthClients               OAuthClients
-	OAuthTokens                OAuthTokens
-	Organizations              Organizations
-	OrganizationMemberships    OrganizationMemberships
-	OrganizationTags           OrganizationTags
-	OrganizationTokens         OrganizationTokens
-	Plans                      Plans
-	PlanExports                PlanExports
-	Policies                   Policies
-	PolicyChecks               PolicyChecks
-	PolicyEvaluations          PolicyEvaluations
-	PolicySetOutcomes          PolicySetOutcomes
-	PolicySetParameters        PolicySetParameters
-	PolicySetVersions          PolicySetVersions
-	PolicySets                 PolicySets
-	RegistryModules            RegistryModules
-	RegistryNoCodeModules      RegistryNoCodeModules
-	RegistryProviders          RegistryProviders
-	RegistryProviderPlatforms  RegistryProviderPlatforms
-	RegistryProviderVersions   RegistryProviderVersions
-	ReservedTagKeys            ReservedTagKeys
-	Runs                       Runs
-	RunEvents                  RunEvents
-	RunTasks                   RunTasks
-	RunTasksIntegration        RunTasksIntegration
-	RunTriggers                RunTriggers
-	SSHKeys                    SSHKeys
-	Stacks                     Stacks
-	StackConfigurations        StackConfigurations
-	StackDeployments           StackDeployments
-	StackDeploymentGroups      StackDeploymentGroups
-	StackDeploymentRuns        StackDeploymentRuns
-	StackDeploymentSteps       StackDeploymentSteps
-	StackPlans                 StackPlans
-	StackPlanOperations        StackPlanOperations
-	StackSources               StackSources
-	StateVersionOutputs        StateVersionOutputs
-	StateVersions              StateVersions
-	TaskResults                TaskResults
-	TaskStages                 TaskStages
-	Teams                      Teams
-	TeamAccess                 TeamAccesses
-	TeamMembers                TeamMembers
-	TeamProjectAccess          TeamProjectAccesses
-	TeamTokens                 TeamTokens
-	TestRuns                   TestRuns
-	TestVariables              TestVariables
-	Users                      Users
-	UserTokens                 UserTokens
-	Variables                  Variables
-	VariableSets               VariableSets
-	VariableSetVariables       VariableSetVariables
-	Workspaces                 Workspaces
-	WorkspaceResources         WorkspaceResources
-	WorkspaceRunTasks          WorkspaceRunTasks
-	Projects                   Projects
+	Admin                           Admin
+	Agents                          Agents
+	AgentPools                      AgentPools
+	AgentTokens                     AgentTokens
+	Applies                         Applies
+	AuditTrails                     AuditTrails
+	AWSOIDCConfigurations           AWSOIDCConfigurations
+	GCPOIDCConfigurations           GCPOIDCConfigurations
+	AzureOIDCConfigurations         AzureOIDCConfigurations
+	VaultOIDCConfigurations         VaultOIDCConfigurations
+	Comments                        Comments
+	ConfigurationVersions           ConfigurationVersions
+	CostEstimates                   CostEstimates
+	GHAInstallations                GHAInstallations
+	GPGKeys                         GPGKeys
+	NotificationConfigurations      NotificationConfigurations
+	OAuthClients                    OAuthClients
+	OAuthTokens                     OAuthTokens
+	OrganizationAuditConfigurations OrganizationAuditConfigurations
+	OrganizationMemberships         OrganizationMemberships
+	Organizations                   Organizations
+	OrganizationTags                OrganizationTags
+	OrganizationTokens              OrganizationTokens
+	Plans                           Plans
+	PlanExports                     PlanExports
+	Policies                        Policies
+	PolicyChecks                    PolicyChecks
+	PolicyEvaluations               PolicyEvaluations
+	PolicySetOutcomes               PolicySetOutcomes
+	PolicySetParameters             PolicySetParameters
+	PolicySetVersions               PolicySetVersions
+	PolicySets                      PolicySets
+	QueryRuns                       QueryRuns
+	RegistryModules                 RegistryModules
+	RegistryNoCodeModules           RegistryNoCodeModules
+	RegistryProviders               RegistryProviders
+	RegistryProviderPlatforms       RegistryProviderPlatforms
+	RegistryProviderVersions        RegistryProviderVersions
+	ReservedTagKeys                 ReservedTagKeys
+	Runs                            Runs
+	RunEvents                       RunEvents
+	RunTasks                        RunTasks
+	RunTasksIntegration             RunTasksIntegration
+	RunTriggers                     RunTriggers
+	SSHKeys                         SSHKeys
+	Stacks                          Stacks
+	HYOKConfigurations              HYOKConfigurations
+	HYOKCustomerKeyVersions         HYOKCustomerKeyVersions
+	HYOKEncryptedDataKeys           HYOKEncryptedDataKeys
+	StackConfigurations             StackConfigurations
+	StackConfigurationSummaries     StackConfigurationSummaries
+	StackDeployments                StackDeployments
+	StackDeploymentGroups           StackDeploymentGroups
+	StackDeploymentGroupSummaries   StackDeploymentGroupSummaries
+	StackDeploymentRuns             StackDeploymentRuns
+	StackDeploymentSteps            StackDeploymentSteps
+	StackDiagnostics                StackDiagnostics
+	StackStates                     StackStates
+	StateVersionOutputs             StateVersionOutputs
+	StateVersions                   StateVersions
+	TaskResults                     TaskResults
+	TaskStages                      TaskStages
+	Teams                           Teams
+	TeamAccess                      TeamAccesses
+	TeamMembers                     TeamMembers
+	TeamProjectAccess               TeamProjectAccesses
+	TeamTokens                      TeamTokens
+	TestRuns                        TestRuns
+	TestVariables                   TestVariables
+	Users                           Users
+	UserTokens                      UserTokens
+	Variables                       Variables
+	VariableSets                    VariableSets
+	VariableSetVariables            VariableSetVariables
+	Workspaces                      Workspaces
+	WorkspaceResources              WorkspaceResources
+	WorkspaceRunTasks               WorkspaceRunTasks
+	Projects                        Projects
 
 	Meta Meta
 }
@@ -460,6 +470,10 @@ func NewClient(cfg *Config) (*Client, error) {
 	client.AgentTokens = &agentTokens{client: client}
 	client.Applies = &applies{client: client}
 	client.AuditTrails = &auditTrails{client: client}
+	client.AWSOIDCConfigurations = &awsOIDCConfigurations{client: client}
+	client.GCPOIDCConfigurations = &gcpOIDCConfigurations{client: client}
+	client.AzureOIDCConfigurations = &azureOIDCConfigurations{client: client}
+	client.VaultOIDCConfigurations = &vaultOIDCConfigurations{client: client}
 	client.Comments = &comments{client: client}
 	client.ConfigurationVersions = &configurationVersions{client: client}
 	client.CostEstimates = &costEstimates{client: client}
@@ -473,6 +487,7 @@ func NewClient(cfg *Config) (*Client, error) {
 	client.Organizations = &organizations{client: client}
 	client.OrganizationTags = &organizationTags{client: client}
 	client.OrganizationTokens = &organizationTokens{client: client}
+	client.OrganizationAuditConfigurations = &organizationAuditConfigurations{client: client}
 	client.PlanExports = &planExports{client: client}
 	client.Plans = &plans{client: client}
 	client.Policies = &policies{client: client}
@@ -483,6 +498,7 @@ func NewClient(cfg *Config) (*Client, error) {
 	client.PolicySets = &policySets{client: client}
 	client.PolicySetVersions = &policySetVersions{client: client}
 	client.Projects = &projects{client: client}
+	client.QueryRuns = &queryRuns{client: client}
 	client.RegistryModules = &registryModules{client: client}
 	client.RegistryProviderPlatforms = &registryProviderPlatforms{client: client}
 	client.RegistryProviders = &registryProviders{client: client}
@@ -495,14 +511,18 @@ func NewClient(cfg *Config) (*Client, error) {
 	client.RunTriggers = &runTriggers{client: client}
 	client.SSHKeys = &sshKeys{client: client}
 	client.Stacks = &stacks{client: client}
+	client.HYOKConfigurations = &hyokConfigurations{client: client}
+	client.HYOKCustomerKeyVersions = &hyokCustomerKeyVersions{client: client}
+	client.HYOKEncryptedDataKeys = &hyokEncryptedDataKeys{client: client}
 	client.StackConfigurations = &stackConfigurations{client: client}
+	client.StackConfigurationSummaries = &stackConfigurationSummaries{client: client}
 	client.StackDeployments = &stackDeployments{client: client}
 	client.StackDeploymentGroups = &stackDeploymentGroups{client: client}
+	client.StackDeploymentGroupSummaries = &stackDeploymentGroupSummaries{client: client}
 	client.StackDeploymentRuns = &stackDeploymentRuns{client: client}
 	client.StackDeploymentSteps = &stackDeploymentSteps{client: client}
-	client.StackPlans = &stackPlans{client: client}
-	client.StackPlanOperations = &stackPlanOperations{client: client}
-	client.StackSources = &stackSources{client: client}
+	client.StackDiagnostics = &stackDiagnostics{client: client}
+	client.StackStates = &stackStates{client: client}
 	client.StateVersionOutputs = &stateVersionOutputs{client: client}
 	client.StateVersions = &stateVersions{client: client}
 	client.TaskResults = &taskResults{client: client}
