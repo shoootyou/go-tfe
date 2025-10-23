@@ -1,5 +1,117 @@
 # Unreleased
 
+* Remove org settings validation in RegistryModulesCreateMonorepo tests, by @jillirami ([#1236](https://github.com/hashicorp/go-tfe/pull/1236))
+
+# v1.95.0
+
+## Enhancements
+
+* Add `Sort` option to `Agents` and `AgentPools`, by @twitnithegirl [#1229](https://github.com/hashicorp/go-tfe/pull/1229)
+* Add serialization for `StacksEnabled` field, `CanEnableStacks` & `CanCreateProject` permissions on Organization Read by @a-anurag27 [#1230](https://github.com/hashicorp/go-tfe/pull/1230)
+* Adds new stacks resources `StackDeployments`, `StackDiagnostics`, and `StackStates`, by @ctrombley [#1226](https://github.com/hashicorp/go-tfe/pull/1226)
+* Adds new `Diagnostics` methods to `StackConfigurations`, and `StackDeploymentSteps`, by @ctrombley [#1226](https://github.com/hashicorp/go-tfe/pull/1226)
+* Adds new `Artifacts` method to `StackDeploymentSteps`, by @ctrombley [#1226](https://github.com/hashicorp/go-tfe/pull/1226)
+* Add serialization for `StacksEnabled` field, `CanEnableStacks` & `CanCreateProject` permissions on Organization Read by @a-anurag27 [#1230](https://github.com/hashicorp/go-tfe/pull/1230)
+
+# v1.94.0
+
+## Enhancements
+
+* Add BETA support for Action invocations via `CreateRunOptions` by @mutahhir [#1206](https://github.com/hashicorp/go-tfe/pull/1206)
+
+# v1.93.0
+
+## Enhancements
+* Exports the StackConfiguration UploadTarGzip receiver function [#1219](https://github.com/hashicorp/go-tfe/pull/1219)
+* Updates BETA stacks resource schemas to match latest API spec by @ctrombley [#1220](https://github.com/hashicorp/go-tfe/pull/1220)
+* Adds support for Hold Your Own Key by @helenjw , @iuri-slywitch-hashicorp and @dominic-retli-hashi [#1201](https://github.com/hashicorp/go-tfe/pull/1201)
+
+## Deprecations
+
+* The beta `StackDeployments`, `StackPlan`, `StackPlanOperation`, and `StackSource` resources have been removed, by @sahar-azizighannad  [#1205](https://github.com/hashicorp/go-tfe/pull/1205)
+
+# v1.92.0
+
+## Enhancements
+
+* Adds BETA support for performing Registry Module test runs on custom Agents by @hashimooon [#1209](httpsLhttps://github.com/hashicorp/go-tfe/pull/1209)
+* Adds support for managing agent pools on `Stacks` by @maed223 [#1214](https://github.com/hashicorp/go-tfe/pull/1214)
+
+## Bug Fixes
+
+* Fixes arch validation on Terraform, OPA, and Sentinel Tool Versions when providing top level `url` and `sha` with multiple `archs` by @kelsi-hoyle [#1212](https://github.com/hashicorp/go-tfe/pull/1212)
+
+# v1.91.1
+
+## Bug Fixes
+
+* Fixes timestamp attribute mapping for deployment runs to use correct API field names (`created-at`/`updated-at` instead of `started-at`/`completed-at`) by @shwetamurali [#1199](https://github.com/hashicorp/go-tfe/pull/1199)
+
+## Enhancements
+
+* Adds support for listing `StackConfigurationSummaries` by @hwatkins05-hashicorp [#1204](https://github.com/hashicorp/go-tfe/pull/1204)
+
+# v1.91.0
+
+## Enhancements
+
+* Adds `Logs` method to `QueryRuns`, which is EXPERIMENTAL, SUBJECT TO CHANGE, and may not be available to all users by @brandonc [#1186](https://github.com/hashicorp/go-tfe/pull/1186)
+* Adds `Source` field to `Workspace` by @jpadrianoGo [#1124](https://github.com/hashicorp/go-tfe/pull/1124)
+* Adds `CreatedBy` relation to `AgentToken` by @jpadrianoGo [#1149](https://github.com/hashicorp/go-tfe/pull/1149)
+* Adds `CreatedAt` field to `AgentPool` by @jpadrianoGo [#1150](https://github.com/hashicorp/go-tfe/pull/1150)
+* Adds `CanceledAt`, `RunEvents`, `TriggerReason` field to `Run` by @jpadrianoGo [#1161](https://github.com/hashicorp/go-tfe/pull/1161)
+* Adds `AllowedProjects` and `ExcludedWorkspaces` to `AgentPool` by @tylerwolf [#1185](https://github.com/hashicorp/go-tfe/pull/1185)
+* Adds `DefaultExecutionMode`, `DefaultAgentPool`, and `SettingOverwrites` to `Project` by @tylerwolf [#1185](https://github.com/hashicorp/go-tfe/pull/1185)
+* Adds `IconUrl`, `InstallationType`, and `InstallationURL` to githubAppInstallation, by @jpadrianoGo [#1191](https://github.com/hashicorp/go-tfe/pull/1191)
+* Adds support for `Workspace` VCSRepoOptions source_directory and tag_prefix, by @jillrami [#1194] (https://github.com/hashicorp/go-tfe/pull/1194)
+
+# v1.90.0
+
+## Bug Fixes
+
+* Fixes `IngressAttributes` field decoding in `PolicySetVersion` by @rageshganeshkumar [#1164](https://github.com/hashicorp/go-tfe/pull/1164)
+* Fixes issue [1061](https://github.com/hashicorp/go-tfe/issues/1061), validation accepts all RunStatus including `"cost_estimated"` by @KenCox-Hashicorp [#1171](https://github.com/hashicorp/go-tfe/pull/1171)
+
+## Enhancements
+* Add support for querying and filtering private registry modules based on a search query, `provider`, `registry_name` and `organization_name`, by @gautambaghel [#1179](https://github.com/hashicorp/go-tfe/pull/1179) 
+* Adds support for `RegistryModule` VCS source_directory and tag_prefix options, by @jillrami [#1154] (https://github.com/hashicorp/go-tfe/pull/1154)
+* Adds endpoint for reruning a stack deployment by @hwatkins05-hashicorp/@Maed223 [#1176](https://github.com/hashicorp/go-tfe/pull/1176)
+* Adds `ReadByName` for `StackDeploymentGroup` by @Maed223 [#1181](https://github.com/hashicorp/go-tfe/pull/1181)
+* Adds BETA support for listing `QueryRuns`, which is EXPERIMENTAL, SUBJECT TO CHANGE, and may not be available to all users by @brandonc [#1177](https://github.com/hashicorp/go-tfe/pull/1177)
+* Adds BETA support for `CreateAndUpload` for `StackConfiguration`, which is EXPERIMENTAL, SUBJECT TO CHANGE, and may not be available to all users by @Maed223 [#1184](https://github.com/hashicorp/go-tfe/pull/1184)
+
+
+# v1.89.0
+
+## Enhancements
+* Add the `Links` attribute to the `StackDeploymentStep` struct to support the deployment step GET endpoint by @shwetamurali [#1167](https://github.com/h)
+* Adds endpoint for cancelling `StackDeploymentRun` by @Maed223 [#1172](https://github.com/hashicorp/go-tfe/pull/1172)
+* Adds `CreatedAt` and `UpdatedAt` fields to `StackConfiguration` by @Maed223 [#1168](https://github.com/hashicorp/go-tfe/pull/1168)
+* Adds endpoint for advancing `StackDeploymentStep` by @hwatkins05-hashicorp [#1166](https://github.com/hashicorp/go-tfe/pull/1166)
+
+# v1.88.0
+
+## Enhancements
+
+* Adds BETA support for reading, testing and updating Organization Audit Configuration by @glennsarti-hashi [#1151](https://github.com/hashicorp/go-tfe/pull/1151)
+* Adds `Completed` status to `StackConfiguration` by @hwatkins05-hashicorp [#1163](https://github.com/hashicorp/go-tfe/pull/1163)
+
+# v1.87.0
+
+## Bug Fixes
+
+* Fixes incorrect primary key usage on `StackDeploymentRun`, `StackDeploymentGroup`, and `StackDeploymentStep`, by @Maed223 [#1156](https://github.com/hashicorp/go-tfe/pull/1156)
+
+## Enhancements
+
+* Updates endpoint for updating stack configuration from `actions/update-configuration` to `fetch-latest-from-vcs` by @hwatkins05-hashicorp [#1157](https://github.com/hashicorp/go-tfe/pull/1157)
+
+# v1.86.0
+
+## Enhancements
+
+* Adds option for `Includes` for `StackDeploymentRuns` Read/List, by @Maed223 [#1152](https://github.com/hashicorp/go-tfe/pull/1152)
+
 # v1.85.0
 
 ## Bug Fixes

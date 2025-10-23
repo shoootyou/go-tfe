@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package tfe
 
 import (
@@ -10,6 +13,7 @@ import (
 
 func TestStackDeploymentGroupsList(t *testing.T) {
 	skipUnlessBeta(t)
+
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -33,13 +37,12 @@ func TestStackDeploymentGroupsList(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, stack)
 
-	stackUpdated, err := client.Stacks.UpdateConfiguration(ctx, stack.ID)
+	stackUpdated, err := client.Stacks.FetchLatestFromVcs(ctx, stack.ID)
 	require.NoError(t, err)
 	require.NotNil(t, stackUpdated)
-	require.NotEmpty(t, stackUpdated.LatestStackConfiguration.ID)
 
-	stackUpdated = pollStackDeployments(t, ctx, client, stackUpdated.ID)
-	require.NotNil(t, stackUpdated.LatestStackConfiguration)
+	stackUpdated = pollStackDeploymentGroups(t, ctx, client, stackUpdated.ID)
+	require.NotEmpty(t, stackUpdated.LatestStackConfiguration.ID)
 
 	t.Run("List with valid stack configuration ID", func(t *testing.T) {
 		sdgl, err := client.StackDeploymentGroups.List(ctx, stackUpdated.LatestStackConfiguration.ID, nil)
@@ -76,6 +79,7 @@ func TestStackDeploymentGroupsList(t *testing.T) {
 
 func TestStackDeploymentGroupsRead(t *testing.T) {
 	skipUnlessBeta(t)
+
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -99,11 +103,11 @@ func TestStackDeploymentGroupsRead(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, stack)
 
-	stackUpdated, err := client.Stacks.UpdateConfiguration(ctx, stack.ID)
+	stackUpdated, err := client.Stacks.FetchLatestFromVcs(ctx, stack.ID)
 	require.NoError(t, err)
 	require.NotNil(t, stackUpdated)
 
-	stackUpdated = pollStackDeployments(t, ctx, client, stackUpdated.ID)
+	stackUpdated = pollStackDeploymentGroups(t, ctx, client, stackUpdated.ID)
 	require.NotNil(t, stackUpdated.LatestStackConfiguration)
 
 	sdgl, err := client.StackDeploymentGroups.List(ctx, stackUpdated.LatestStackConfiguration.ID, nil)
@@ -151,15 +155,15 @@ func TestStackDeploymentGroupsApproveAllPlans(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, stack)
 
-	stackUpdated, err := client.Stacks.UpdateConfiguration(ctx, stack.ID)
+	stackUpdated, err := client.Stacks.FetchLatestFromVcs(ctx, stack.ID)
 	require.NoError(t, err)
 	require.NotNil(t, stackUpdated)
 
-	stack = pollStackDeployments(t, ctx, client, stackUpdated.ID)
-	require.NotNil(t, stack.LatestStackConfiguration)
+	stackUpdated = pollStackDeploymentGroups(t, ctx, client, stackUpdated.ID)
+	require.NotNil(t, stackUpdated.LatestStackConfiguration)
 
 	// Get the deployment group ID from the stack configuration
-	deploymentGroups, err := client.StackDeploymentGroups.List(ctx, stack.LatestStackConfiguration.ID, nil)
+	deploymentGroups, err := client.StackDeploymentGroups.List(ctx, stackUpdated.LatestStackConfiguration.ID, nil)
 	require.NoError(t, err)
 	require.NotNil(t, deploymentGroups)
 	require.NotEmpty(t, deploymentGroups.Items)
@@ -169,5 +173,75 @@ func TestStackDeploymentGroupsApproveAllPlans(t *testing.T) {
 	t.Run("Approving all plans", func(t *testing.T) {
 		err := client.StackDeploymentGroups.ApproveAllPlans(ctx, deploymentGroupID)
 		require.NoError(t, err)
+	})
+}
+
+func TestStackDeploymentGroupsRerun(t *testing.T) {
+	skipUnlessBeta(t)
+
+	client := testClient(t)
+	ctx := context.Background()
+
+	orgTest, orgTestCleanup := createOrganization(t, client)
+	t.Cleanup(orgTestCleanup)
+
+	oauthClient, cleanup := createOAuthClient(t, client, orgTest, nil)
+	t.Cleanup(cleanup)
+
+	stack, err := client.Stacks.Create(ctx, StackCreateOptions{
+		Name: "test-stack",
+		VCSRepo: &StackVCSRepoOptions{
+			Identifier:   "hashicorp-guides/pet-nulls-stack",
+			OAuthTokenID: oauthClient.OAuthTokens[0].ID,
+			Branch:       "main",
+		},
+		Project: &Project{
+			ID: orgTest.DefaultProject.ID,
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, stack)
+
+	stackUpdated, err := client.Stacks.FetchLatestFromVcs(ctx, stack.ID)
+	require.NoError(t, err)
+	require.NotNil(t, stackUpdated)
+
+	stackUpdated = pollStackDeploymentGroups(t, ctx, client, stackUpdated.ID)
+	require.NotNil(t, stackUpdated.LatestStackConfiguration)
+
+	deploymentGroups, err := client.StackDeploymentGroups.List(ctx, stackUpdated.LatestStackConfiguration.ID, nil)
+	require.NoError(t, err)
+	require.NotNil(t, deploymentGroups)
+	require.NotEmpty(t, deploymentGroups.Items)
+
+	deploymentGroupID := deploymentGroups.Items[0].ID
+
+	deploymentRuns, err := client.StackDeploymentRuns.List(ctx, deploymentGroupID, nil)
+	require.NoError(t, err)
+	require.NotNil(t, deploymentRuns)
+	require.NotEmpty(t, deploymentRuns.Items)
+
+	err = client.StackDeploymentGroups.ApproveAllPlans(ctx, deploymentGroupID)
+	require.NoError(t, err)
+
+	pollStackDeploymentRunStatus(t, ctx, client, deploymentRuns.Items[0].ID, "deploying")
+
+	deploymentRunIds := []string{deploymentRuns.Items[0].ID}
+	for _, dr := range deploymentRuns.Items {
+		deploymentRunIds = append(deploymentRunIds, dr.ID)
+	}
+
+	t.Run("No deployments specified for rerun", func(t *testing.T) {
+		err := client.StackDeploymentGroups.Rerun(ctx, deploymentGroupID, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "no deployments specified for rerun")
+	})
+
+	t.Run("Rerun with invalid ID", func(t *testing.T) {
+		err := client.StackDeploymentGroups.Rerun(ctx, "", &StackDeploymentGroupRerunOptions{
+			Deployments: deploymentRunIds,
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid stack deployment group ID")
 	})
 }
