@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package tfe
@@ -94,6 +94,7 @@ type Stack struct {
 	DownstreamCount    int           `jsonapi:"attr,downstream-count"`
 	InputsCount        int           `jsonapi:"attr,inputs-count"`
 	OutputsCount       int           `jsonapi:"attr,outputs-count"`
+	CreationSource     string        `jsonapi:"attr,creation-source"`
 
 	// Relationships
 	Project                  *Project            `jsonapi:"relation,project"`
@@ -122,14 +123,14 @@ type StackComponent struct {
 // StackConfiguration represents a stack configuration snapshot
 type StackConfiguration struct {
 	// Attributes
-	ID                      string            `jsonapi:"primary,stack-configurations"`
-	Status                  string            `jsonapi:"attr,status"`
-	SequenceNumber          int               `jsonapi:"attr,sequence-number"`
-	Components              []*StackComponent `jsonapi:"attr,components"`
-	PreparingEventStreamURL string            `jsonapi:"attr,preparing-event-stream-url"`
-	CreatedAt               time.Time         `jsonapi:"attr,created-at,iso8601"`
-	UpdatedAt               time.Time         `jsonapi:"attr,updated-at,iso8601"`
-	Speculative             bool              `jsonapi:"attr,speculative"`
+	ID                      string                   `jsonapi:"primary,stack-configurations"`
+	Status                  StackConfigurationStatus `jsonapi:"attr,status"`
+	SequenceNumber          int                      `jsonapi:"attr,sequence-number"`
+	Components              []*StackComponent        `jsonapi:"attr,components"`
+	PreparingEventStreamURL string                   `jsonapi:"attr,preparing-event-stream-url"`
+	CreatedAt               time.Time                `jsonapi:"attr,created-at,iso8601"`
+	UpdatedAt               time.Time                `jsonapi:"attr,updated-at,iso8601"`
+	Speculative             bool                     `jsonapi:"attr,speculative"`
 
 	// Relationships
 	Stack             *Stack             `jsonapi:"relation,stack"`
@@ -149,7 +150,7 @@ const (
 // StackListOptions represents the options for listing stacks.
 type StackListOptions struct {
 	ListOptions
-	ProjectID    string          `url:"filter[project[id]],omitempty"`
+	ProjectID    string          `url:"filter[project][id],omitempty"`
 	Sort         StackSortColumn `url:"sort,omitempty"`
 	SearchByName string          `url:"search[name],omitempty"`
 }
@@ -157,20 +158,23 @@ type StackListOptions struct {
 // StackCreateOptions represents the options for creating a stack. The project
 // relation is required.
 type StackCreateOptions struct {
-	Type        string               `jsonapi:"primary,stacks"`
-	Name        string               `jsonapi:"attr,name"`
-	Description *string              `jsonapi:"attr,description,omitempty"`
-	VCSRepo     *StackVCSRepoOptions `jsonapi:"attr,vcs-repo"`
-	Project     *Project             `jsonapi:"relation,project"`
-	AgentPool   *AgentPool           `jsonapi:"relation,agent-pool"`
+	Type               string               `jsonapi:"primary,stacks"`
+	Name               string               `jsonapi:"attr,name"`
+	Migration          *bool                `jsonapi:"attr,migration,omitempty"`
+	SpeculativeEnabled *bool                `jsonapi:"attr,speculative-enabled,omitempty"`
+	Description        *string              `jsonapi:"attr,description,omitempty"`
+	VCSRepo            *StackVCSRepoOptions `jsonapi:"attr,vcs-repo"`
+	Project            *Project             `jsonapi:"relation,project"`
+	AgentPool          *AgentPool           `jsonapi:"relation,agent-pool"`
 }
 
 // StackUpdateOptions represents the options for updating a stack.
 type StackUpdateOptions struct {
-	Name        *string              `jsonapi:"attr,name,omitempty"`
-	Description *string              `jsonapi:"attr,description,omitempty"`
-	VCSRepo     *StackVCSRepoOptions `jsonapi:"attr,vcs-repo"`
-	AgentPool   *AgentPool           `jsonapi:"relation,agent-pool"`
+	Name               *string              `jsonapi:"attr,name,omitempty"`
+	Description        *string              `jsonapi:"attr,description,omitempty"`
+	SpeculativeEnabled *bool                `jsonapi:"attr,speculative-enabled,omitempty"`
+	VCSRepo            *StackVCSRepoOptions `jsonapi:"attr,vcs-repo"`
+	AgentPool          *AgentPool           `jsonapi:"relation,agent-pool"`
 }
 
 // WaitForStatusResult is the data structure that is sent over the channel

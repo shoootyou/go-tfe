@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package tfe
@@ -13,6 +13,7 @@ import (
 )
 
 func TestRegistryProvidersList(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -157,6 +158,7 @@ func TestRegistryProvidersList(t *testing.T) {
 }
 
 func TestRegistryProvidersCreate(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -283,6 +285,7 @@ func TestRegistryProvidersCreate(t *testing.T) {
 }
 
 func TestRegistryProvidersRead(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -399,6 +402,7 @@ func TestRegistryProvidersRead(t *testing.T) {
 }
 
 func TestRegistryProvidersDelete(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -457,6 +461,7 @@ func TestRegistryProvidersDelete(t *testing.T) {
 }
 
 func TestRegistryProvidersIDValidation(t *testing.T) {
+	t.Parallel()
 	orgName := "orgName"
 	registryName := PublicRegistry
 

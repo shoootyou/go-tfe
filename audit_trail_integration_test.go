@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package tfe
@@ -13,6 +13,7 @@ import (
 )
 
 func TestAuditTrailsList(t *testing.T) {
+	t.Parallel()
 	skipIfEnterprise(t)
 
 	userClient := testClient(t)

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package tfe
@@ -13,6 +13,7 @@ import (
 )
 
 func TestReservedTagKeysList(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -66,6 +67,7 @@ func TestReservedTagKeysList(t *testing.T) {
 }
 
 func TestReservedTagKeysCreate(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -144,6 +146,7 @@ func TestReservedTagKeysCreate(t *testing.T) {
 }
 
 func TestReservedTagKeysUpdate(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -219,6 +222,7 @@ func TestReservedTagKeysUpdate(t *testing.T) {
 }
 
 func TestReservedTagKeysDelete(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 

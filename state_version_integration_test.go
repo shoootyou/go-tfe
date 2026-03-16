@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package tfe
@@ -26,6 +26,7 @@ func containsStateVersion(versions []*StateVersion, item *StateVersion) bool {
 }
 
 func TestStateVersionsList(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -105,6 +106,7 @@ func TestStateVersionsList(t *testing.T) {
 }
 
 func TestStateVersionsUpload(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 
 	wTest, wTestCleanup := createWorkspace(t, client, nil)
@@ -157,7 +159,6 @@ func TestStateVersionsUpload(t *testing.T) {
 		assert.NotEmpty(t, sv.DownloadURL)
 		assert.Equal(t, StateVersionFinalized, sv.Status)
 	})
-
 	t.Run("cannot provide base64 state parameter when uploading", func(t *testing.T) {
 		ctx := context.Background()
 		_, err = client.StateVersions.Upload(ctx, wTest.ID, StateVersionUploadOptions{
@@ -223,7 +224,10 @@ func TestStateVersionsUpload(t *testing.T) {
 		require.NoError(t, err)
 
 		// Get a refreshed view of the configuration version.
-		sv, err = client.StateVersions.Read(ctx, sv.ID)
+		sv, err = retryPatientlyIf(
+			func() (any, error) { return client.StateVersions.Read(ctx, sv.ID) },
+			func(sv *StateVersion) bool { return sv.DownloadURL == "" },
+		)
 		require.NoError(t, err)
 
 		assert.NotEmpty(t, sv.SanitizedStateDownloadURL)
@@ -321,7 +325,10 @@ func TestStateVersionsCreate_RunDependent(t *testing.T) {
 		require.NoError(t, err)
 
 		// Get a refreshed view of the configuration version.
-		refreshed, err := client.StateVersions.Read(ctx, sv.ID)
+		refreshed, err := retryPatientlyIf(
+			func() (any, error) { return client.StateVersions.Read(ctx, sv.ID) },
+			func(sv *StateVersion) bool { return sv.DownloadURL == "" },
+		)
 		require.NoError(t, err)
 
 		_, err = client.Workspaces.Unlock(ctx, wTest.ID)
@@ -336,8 +343,9 @@ func TestStateVersionsCreate_RunDependent(t *testing.T) {
 			assert.NotEmpty(t, item.ID)
 			assert.Equal(t, int64(1), item.Serial)
 			assert.NotEmpty(t, item.CreatedAt)
-			assert.NotEmpty(t, item.DownloadURL)
 		}
+
+		assert.NotEmpty(t, refreshed.DownloadURL)
 	})
 
 	t.Run("with external state representation", func(t *testing.T) {
@@ -358,7 +366,10 @@ func TestStateVersionsCreate_RunDependent(t *testing.T) {
 		require.NoError(t, err)
 
 		// Get a refreshed view of the configuration version.
-		refreshed, err := client.StateVersions.Read(ctx, sv.ID)
+		refreshed, err := retryPatientlyIf(
+			func() (any, error) { return client.StateVersions.Read(ctx, sv.ID) },
+			func(sv *StateVersion) bool { return sv.DownloadURL == "" },
+		)
 		require.NoError(t, err)
 
 		_, err = client.Workspaces.Unlock(ctx, wTest.ID)
@@ -375,8 +386,9 @@ func TestStateVersionsCreate_RunDependent(t *testing.T) {
 			assert.NotEmpty(t, item.ID)
 			assert.Equal(t, int64(1), item.Serial)
 			assert.NotEmpty(t, item.CreatedAt)
-			assert.NotEmpty(t, item.DownloadURL)
 		}
+
+		assert.NotEmpty(t, refreshed.DownloadURL)
 	})
 
 	t.Run("with the force flag set", func(t *testing.T) {
@@ -404,7 +416,10 @@ func TestStateVersionsCreate_RunDependent(t *testing.T) {
 		require.NoError(t, err)
 
 		// Get a refreshed view of the configuration version.
-		refreshed, err := client.StateVersions.Read(ctx, sv.ID)
+		refreshed, err := retryPatientlyIf(
+			func() (any, error) { return client.StateVersions.Read(ctx, sv.ID) },
+			func(sv *StateVersion) bool { return sv.DownloadURL == "" },
+		)
 		require.NoError(t, err)
 
 		_, err = client.Workspaces.Unlock(ctx, wTest.ID)
@@ -419,8 +434,9 @@ func TestStateVersionsCreate_RunDependent(t *testing.T) {
 			assert.NotEmpty(t, item.ID)
 			assert.Equal(t, int64(2), item.Serial)
 			assert.NotEmpty(t, item.CreatedAt)
-			assert.NotEmpty(t, item.DownloadURL)
 		}
+
+		assert.NotEmpty(t, refreshed.DownloadURL)
 	})
 
 	t.Run("with a run to associate with", func(t *testing.T) {
@@ -440,7 +456,10 @@ func TestStateVersionsCreate_RunDependent(t *testing.T) {
 		require.NotEmpty(t, sv.Run)
 
 		// Get a refreshed view of the configuration version.
-		refreshed, err := client.StateVersions.Read(ctx, sv.ID)
+		refreshed, err := retryPatientlyIf(
+			func() (any, error) { return client.StateVersions.Read(ctx, sv.ID) },
+			func(sv *StateVersion) bool { return sv.DownloadURL == "" },
+		)
 		require.NoError(t, err)
 		require.NotEmpty(t, refreshed.Run)
 
@@ -482,6 +501,7 @@ func TestStateVersionsCreate_RunDependent(t *testing.T) {
 }
 
 func TestStateVersionsRead(t *testing.T) {
+	t.Parallel()
 	t.Skip("Skipping due to persistent failures - see TF-31172")
 
 	client := testClient(t)
@@ -527,6 +547,7 @@ func TestStateVersionsRead(t *testing.T) {
 
 		require.NotNil(t, sv.BillableRUMCount)
 		assert.Greater(t, *sv.BillableRUMCount, uint32(0))
+		assert.Greater(t, sv.Size, int64(0))
 	})
 
 	t.Run("when the state version does not exist", func(t *testing.T) {
@@ -582,6 +603,7 @@ func TestStateVersionsRead(t *testing.T) {
 }
 
 func TestStateVersionsReadWithOptions(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -604,6 +626,7 @@ func TestStateVersionsReadWithOptions(t *testing.T) {
 }
 
 func TestStateVersionsCurrent(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -649,6 +672,7 @@ func TestStateVersionsCurrent(t *testing.T) {
 }
 
 func TestStateVersionsCurrentWithOptions(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -674,6 +698,7 @@ func TestStateVersionsCurrentWithOptions(t *testing.T) {
 }
 
 func TestStateVersionsDownload(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -697,6 +722,7 @@ func TestStateVersionsDownload(t *testing.T) {
 }
 
 func TestStateVersionOutputs(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -776,6 +802,7 @@ func TestStateVersionOutputs(t *testing.T) {
 }
 
 func TestStateVersions_ManageBackingData(t *testing.T) {
+	t.Parallel()
 	skipUnlessEnterprise(t)
 
 	client := testClient(t)

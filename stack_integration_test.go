@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package tfe
@@ -13,6 +13,7 @@ import (
 )
 
 func TestStackCreateAndList(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)
@@ -38,10 +39,13 @@ func TestStackCreateAndList(t *testing.T) {
 		Project: &Project{
 			ID: orgTest.DefaultProject.ID,
 		},
+		Migration:          Bool(true),
+		SpeculativeEnabled: Bool(true),
 	})
 
 	require.NoError(t, err)
 	require.NotNil(t, stack1)
+	require.True(t, stack1.SpeculativeEnabled)
 
 	stack2, err := client.Stacks.Create(ctx, StackCreateOptions{
 		Name: "zz-test-stack",
@@ -56,6 +60,7 @@ func TestStackCreateAndList(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, stack2)
+	require.False(t, stack2.SpeculativeEnabled)
 
 	t.Run("List without options", func(t *testing.T) {
 		t.Parallel()
@@ -64,6 +69,8 @@ func TestStackCreateAndList(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Len(t, stackList.Items, 2)
+		assert.Equal(t, stack1.CreationSource, "migration-api")
+		assert.Equal(t, stack2.CreationSource, "api")
 	})
 
 	t.Run("List with project filter", func(t *testing.T) {
@@ -124,12 +131,13 @@ func TestStackCreateAndList(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Len(t, stackList.Items, 1)
-		assert.Equal(t, 2, stackList.Pagination.TotalPages)
-		assert.Equal(t, 2, stackList.Pagination.TotalCount)
+		assert.Equal(t, 2, stackList.TotalPages)
+		assert.Equal(t, 2, stackList.TotalCount)
 	})
 }
 
 func TestStackReadUpdateDelete(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)
@@ -164,6 +172,7 @@ func TestStackReadUpdateDelete(t *testing.T) {
 	require.NotEmpty(t, stack.VCSRepo.Identifier)
 	require.NotEmpty(t, stack.VCSRepo.OAuthTokenID)
 	require.NotEmpty(t, stack.VCSRepo.Branch)
+	require.False(t, stack.SpeculativeEnabled)
 
 	stackRead, err := client.Stacks.Read(ctx, stack.ID)
 	require.NoError(t, err)
@@ -172,6 +181,7 @@ func TestStackReadUpdateDelete(t *testing.T) {
 	require.Equal(t, stack.VCSRepo.Branch, stackRead.VCSRepo.Branch)
 	require.Equal(t, stack.AgentPool.ID, stackRead.AgentPool.ID)
 	assert.Equal(t, stack, stackRead)
+	assert.False(t, stackRead.SpeculativeEnabled)
 
 	updatedPool, err := client.AgentPools.Create(ctx, orgTest.Name, AgentPoolCreateOptions{
 		Name: String("updated-test-pool"),
@@ -185,12 +195,14 @@ func TestStackReadUpdateDelete(t *testing.T) {
 			OAuthTokenID: oauthClient.OAuthTokens[0].ID,
 			Branch:       "main",
 		},
-		AgentPool: updatedPool,
+		AgentPool:          updatedPool,
+		SpeculativeEnabled: Bool(true),
 	})
 
 	require.NoError(t, err)
 	require.Equal(t, "updated description", stackUpdated.Description)
 	require.Equal(t, updatedPool.ID, stackUpdated.AgentPool.ID)
+	require.True(t, stackUpdated.SpeculativeEnabled)
 
 	stackUpdatedConfig, err := client.Stacks.FetchLatestFromVcs(ctx, stack.ID)
 	require.NoError(t, err)
@@ -205,6 +217,7 @@ func TestStackReadUpdateDelete(t *testing.T) {
 }
 
 func TestStackRemoveVCSBacking(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)
@@ -251,6 +264,7 @@ func TestStackRemoveVCSBacking(t *testing.T) {
 }
 
 func TestStackReadUpdateForceDelete(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)
@@ -410,7 +424,7 @@ func pollStackDeploymentRunStatus(t *testing.T, ctx context.Context, client *Cli
 			}
 
 			t.Logf("Stack deployment run %s had status %q", deploymentRunID, deploymentRun.Status)
-			if deploymentRun.Status == status {
+			if deploymentRun.Status.String() == status {
 				finished = true
 			}
 		}
@@ -441,7 +455,7 @@ func pollStackConfigurationStatus(t *testing.T, ctx context.Context, client *Cli
 			}
 
 			t.Logf("Stack configuration %q had status %q", stackConfigID, stackConfig.Status)
-			if stackConfig.Status == status {
+			if stackConfig.Status.String() == status {
 				finished = true
 			}
 		}

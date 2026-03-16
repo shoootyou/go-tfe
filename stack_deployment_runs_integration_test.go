@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 
 // SPDX-License-Identifier: MPL-2.0
 
@@ -13,6 +13,7 @@ import (
 )
 
 func TestStackDeploymentRunsList(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)
@@ -97,6 +98,7 @@ func TestStackDeploymentRunsList(t *testing.T) {
 }
 
 func TestStackDeploymentRunsRead(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)
@@ -168,6 +170,7 @@ func TestStackDeploymentRunsRead(t *testing.T) {
 }
 
 func TestStackDeploymentRunsApproveAllPlans(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)
@@ -221,6 +224,7 @@ func TestStackDeploymentRunsApproveAllPlans(t *testing.T) {
 }
 
 func TestStackDeploymentRunsCancel(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)

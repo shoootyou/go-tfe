@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package tfe
@@ -13,6 +13,7 @@ import (
 )
 
 func TestOAuthTokensList(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -76,6 +77,7 @@ func TestOAuthTokensList(t *testing.T) {
 }
 
 func TestOAuthTokensRead(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -103,6 +105,7 @@ func TestOAuthTokensRead(t *testing.T) {
 }
 
 func TestOAuthTokensUpdate(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -161,6 +164,7 @@ dpIe8YOINN27XaojJvVpT5uBVCcZLF+G7kaMjSwCTlDx3Q==
 }
 
 func TestOAuthTokensDelete(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 

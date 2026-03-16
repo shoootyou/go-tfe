@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package tfe
@@ -14,6 +14,7 @@ import (
 )
 
 func TestStackDeploymentStepsList(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)
@@ -104,6 +105,7 @@ func TestStackDeploymentStepsList(t *testing.T) {
 }
 
 func TestStackDeploymentStepsRead(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)
@@ -157,6 +159,7 @@ func TestStackDeploymentStepsRead(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotEmpty(t, sds.ID)
 		assert.NotEmpty(t, sds.Status)
+		assert.NotEmpty(t, sds.OperationType)
 	})
 
 	t.Run("Read with invalid ID", func(t *testing.T) {
@@ -166,6 +169,7 @@ func TestStackDeploymentStepsRead(t *testing.T) {
 }
 
 func TestStackDeploymentStepsAdvance(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)
@@ -256,7 +260,7 @@ func pollStackDeploymentStepStatus(t *testing.T, ctx context.Context, client *Cl
 			}
 
 			t.Logf("Stack deployment step %s had status %q", deploymentStep.ID, deploymentStep.Status)
-			if deploymentStep.Status == status {
+			if deploymentStep.Status.String() == status {
 				finished = true
 			}
 		}
@@ -266,6 +270,7 @@ func pollStackDeploymentStepStatus(t *testing.T, ctx context.Context, client *Cl
 }
 
 func TestStackDeploymentStepsDiagnosticsArtifacts(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)

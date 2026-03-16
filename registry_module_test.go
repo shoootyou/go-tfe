@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package tfe
@@ -13,6 +13,7 @@ import (
 )
 
 func TestRegistryModules_Update_AgentExecutionValidation(t *testing.T) {
+	t.Parallel()
 	// Create a test server for API calls
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// This shouldn't be called for validation errors, but provide a response just in case
@@ -104,6 +105,7 @@ func TestRegistryModules_Update_AgentExecutionValidation(t *testing.T) {
 }
 
 func TestRegistryModules_CreateWithVCSConnection_AgentExecutionValidation(t *testing.T) {
+	t.Parallel()
 	// Create a test server for API calls
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// This shouldn't be called for validation errors, but provide a response just in case

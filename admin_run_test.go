@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package tfe
@@ -11,6 +11,7 @@ import (
 )
 
 func Test_validateAdminRunFilterParams(t *testing.T) {
+	t.Parallel()
 	// All RunStatus values - keep this in sync with run.go
 	validRunStatuses := []string{
 		"applied",

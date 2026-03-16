@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package tfe
@@ -20,11 +20,13 @@ import (
 )
 
 func TestClient_newClient(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", ContentTypeJSONAPI)
 		w.Header().Set("X-RateLimit-Limit", "30")
 		w.Header().Set("TFP-API-Version", "34.21.9")
 		w.Header().Set("X-TFE-Version", "202205-1")
+		w.Header().Set("X-TFE-Current-Version", "1.1.0")
 		if enterpriseEnabled() {
 			w.Header().Set("TFP-AppName", "Terraform Enterprise")
 		} else {
@@ -87,7 +89,10 @@ func TestClient_newClient(t *testing.T) {
 			t.Errorf("unexpected remote API version %q; want %q", client.RemoteAPIVersion(), want)
 		}
 		if want := "202205-1"; client.RemoteTFEVersion() != want {
-			t.Errorf("unexpected remote TFE version %q; want %q", client.RemoteTFEVersion(), want)
+			t.Errorf("unexpected remote TFE monthly version %q; want %q", client.RemoteTFEVersion(), want)
+		}
+		if want := "1.1.0"; client.RemoteTFENumericVersion() != want {
+			t.Errorf("unexpected remote TFE numeric version %q; want %q", client.RemoteTFENumericVersion(), want)
 		}
 
 		if enterpriseEnabled() {
@@ -105,6 +110,7 @@ func TestClient_newClient(t *testing.T) {
 }
 
 func TestClient_defaultConfig(t *testing.T) {
+	t.Parallel()
 	t.Run("with no environment variables", func(t *testing.T) {
 		defer setupEnvVars("", "")()
 		os.Unsetenv("TFE_HOSTNAME")
@@ -137,6 +143,7 @@ func TestClient_defaultConfig(t *testing.T) {
 }
 
 func TestClient_headers(t *testing.T) {
+	t.Parallel()
 	testedCalls := 0
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		testedCalls++
@@ -200,6 +207,7 @@ func TestClient_headers(t *testing.T) {
 }
 
 func TestClient_userAgent(t *testing.T) {
+	t.Parallel()
 	testedCalls := 0
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		testedCalls++
@@ -260,6 +268,7 @@ type InvalidBody struct {
 }
 
 func TestClient_requestBodySerialization(t *testing.T) {
+	t.Parallel()
 	t.Run("jsonapi request", func(t *testing.T) {
 		body := JSONAPIBody{StrAttr: "foo"}
 		requestBody, err := createRequest(&body)
@@ -352,10 +361,12 @@ func TestClient_requestBodySerialization(t *testing.T) {
 		}
 	})
 
+	expectedErr := "go-tfe bug: DELETE/PATCH/POST body must be nil, ptr, or ptr slice"
+
 	t.Run("non-pointer request", func(t *testing.T) {
 		body := InvalidBody{}
 		_, err := createRequest(body)
-		if err == nil || err.Error() != "go-tfe bug: DELETE/PATCH/POST body must be nil, ptr, or ptr slice" {
+		if err == nil || err.Error() != expectedErr {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
@@ -363,7 +374,7 @@ func TestClient_requestBodySerialization(t *testing.T) {
 	t.Run("slice of non-pointer request", func(t *testing.T) {
 		body := []InvalidBody{{}}
 		_, err := createRequest(body)
-		if err == nil || err.Error() != "go-tfe bug: DELETE/PATCH/POST body must be nil, ptr, or ptr slice" {
+		if err == nil || err.Error() != expectedErr {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
@@ -371,7 +382,7 @@ func TestClient_requestBodySerialization(t *testing.T) {
 	t.Run("map request", func(t *testing.T) {
 		body := make(map[string]string)
 		_, err := createRequest(body)
-		if err == nil || err.Error() != "go-tfe bug: DELETE/PATCH/POST body must be nil, ptr, or ptr slice" {
+		if err == nil || err.Error() != expectedErr {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
@@ -379,7 +390,7 @@ func TestClient_requestBodySerialization(t *testing.T) {
 	t.Run("string request", func(t *testing.T) {
 		body := "foo"
 		_, err := createRequest(body)
-		if err == nil || err.Error() != "go-tfe bug: DELETE/PATCH/POST body must be nil, ptr, or ptr slice" {
+		if err == nil || err.Error() != expectedErr {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
@@ -405,6 +416,7 @@ func createRequest(v interface{}) ([]byte, error) {
 }
 
 func TestClient_configureLimiter(t *testing.T) {
+	t.Parallel()
 	rateLimit := ""
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", ContentTypeJSONAPI)
@@ -466,6 +478,7 @@ func TestClient_configureLimiter(t *testing.T) {
 }
 
 func TestClient_retryHTTPCheck(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", ContentTypeJSONAPI)
 		w.Header().Set("X-RateLimit-Limit", "30")
@@ -548,6 +561,7 @@ func TestClient_retryHTTPCheck(t *testing.T) {
 }
 
 func TestClient_retryHTTPBackoff(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", ContentTypeJSONAPI)
 		w.Header().Set("X-RateLimit-Limit", "30")

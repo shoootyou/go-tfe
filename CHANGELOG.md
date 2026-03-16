@@ -1,6 +1,48 @@
 # Unreleased
 
+# v1.101.0
+
+## Enhancements
+* Adds the `SpeculativeEnabled` field to the `StackCreateOptions` and `StackUpdateOptions` structs by @arunatibm [1279](https://github.com/hashicorp/go-tfe/pull/1279)
+* Adds `Name` and `Provider` fields to `RegistryModuleCreateWithVCSConnectionOptions` to support explicit module naming for monorepos with non-standard repository names, by @jillirami [#1277](https://github.com/hashicorp/go-tfe/pull/1277)
+* Adds the `Size` field to `StateVersion` by @Shaunakone [#1280](https://github.com/hashicorp/go-tfe/pull/1280)
+
+
+# v1.100.0
+
+## Enhancements
+* Adds `ReadWithOptions` method to `RunTriggers` to support including related resources when reading a run trigger by @Maed223 [#1275](https://github.com/hashicorp/go-tfe/pull/1275)
+
+# v1.99.0
+
+## Enhancements
+* Adds `ProjectRemoteState` field to `Workspace` to support state sharing at the project level, by @hs26gill [#1248](https://github.com/hashicorp/go-tfe/pull/1248)
+* Adds 'Migration' field to `StackCreateOptions` and `CreationSource` to stack struct to provide insights re: stack creation [#1266](https://github.com/hashicorp/go-tfe/pull/1266)
+
+# v1.98.0
+
+## Enhancements
+* Adds `UserTokensEnabled` field to `Organization` to support enabling/disabling user tokens for an organization by @JarrettSpiker [#1225](https://github.com/hashicorp/go-tfe/pull/1225)
+* Adds `DeploymentRunStatus` and `DeploymentStepStatus` types by @Maed223 [#1261](https://github.com/hashicorp/go-tfe/pull/1261)
+
+## Bug Fixes
+
+* Resolve differences between given and actual status composition in `StackConfigurationStatus` and `DeploymentGroupStatus`  by @Maed223 [#1261](https://github.com/hashicorp/go-tfe/pull/1261)
+
+# v1.97.0
+
+## Enhancements
+
+* Add variable set support for stacks with `ApplyToStacks`, `RemoveFromStacks`, and `UpdateStacks` API methods by @nithishravindra [#1251](https://github.com/hashicorp/go-tfe/pull/1251)
+
+# v1.96.0
+
+## Enhancements
+
+* QueryRun API is now generally available in HCP Terraform (not available in Terraform Enterprise), by @sowju-hashicorp [#1245](https://github.com/hashicorp/go-tfe/pull/1245)
+
 * Remove org settings validation in RegistryModulesCreateMonorepo tests, by @jillirami ([#1236](https://github.com/hashicorp/go-tfe/pull/1236))
+* Add `RemoteTFENumericVersion()` to the `Client` interface, which exposes the `X-TFE-Current-Version` header set by a remote TFE instance by @skj-skj [#1246](https://github.com/hashicorp/go-tfe/pull/1246)
 
 # v1.95.0
 

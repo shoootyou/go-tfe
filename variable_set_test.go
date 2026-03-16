@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package tfe
@@ -12,6 +12,7 @@ import (
 )
 
 func TestVariableSetsList(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -67,6 +68,7 @@ func TestVariableSetsList(t *testing.T) {
 }
 
 func TestVariableSetsListForWorkspace(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -127,6 +129,7 @@ func TestVariableSetsListForWorkspace(t *testing.T) {
 }
 
 func TestVariableSetsListForProject(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -184,6 +187,7 @@ func TestVariableSetsListForProject(t *testing.T) {
 }
 
 func TestVariableSetsCreate(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -269,6 +273,7 @@ func TestVariableSetsCreate(t *testing.T) {
 }
 
 func TestVariableSetsRead(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -301,6 +306,7 @@ func TestVariableSetsRead(t *testing.T) {
 }
 
 func TestVariableSetsUpdate(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 	orgTest, orgTestCleanup := createOrganization(t, client)
@@ -337,6 +343,7 @@ func TestVariableSetsUpdate(t *testing.T) {
 }
 
 func TestVariableSetsDelete(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -564,7 +571,148 @@ func TestVariableSetsApplyToAndRemoveFromProjects(t *testing.T) {
 	})
 }
 
+func TestVariableSetsApplyToAndRemoveFromStacks(t *testing.T) {
+	skipUnlessBeta(t)
+
+	client := testClient(t)
+	ctx := context.Background()
+
+	orgTest, orgTestCleanup := createOrganization(t, client)
+	t.Cleanup(orgTestCleanup)
+
+	vsTest, vsTestCleanup := createVariableSet(t, client, orgTest, VariableSetCreateOptions{})
+	t.Cleanup(vsTestCleanup)
+
+	oauthClient, cleanup := createOAuthClient(t, client, orgTest, nil)
+	t.Cleanup(cleanup)
+
+	stackTest1, err := client.Stacks.Create(ctx, StackCreateOptions{
+		Name: "test-stack-1",
+		VCSRepo: &StackVCSRepoOptions{
+			Identifier:   "hashicorp-guides/pet-nulls-stack",
+			OAuthTokenID: oauthClient.OAuthTokens[0].ID,
+		},
+		Project: &Project{
+			ID: orgTest.DefaultProject.ID,
+		},
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if err := client.Stacks.Delete(ctx, stackTest1.ID); err != nil {
+			t.Logf("Failed to cleanup stack %s: %v", stackTest1.ID, err)
+		}
+	})
+
+	// Wait for stack to be ready by triggering configuration update
+	_, err = client.Stacks.FetchLatestFromVcs(ctx, stackTest1.ID)
+	require.NoError(t, err)
+
+	stackTest2, err := client.Stacks.Create(ctx, StackCreateOptions{
+		Name: "test-stack-2",
+		VCSRepo: &StackVCSRepoOptions{
+			Identifier:   "hashicorp-guides/pet-nulls-stack",
+			OAuthTokenID: oauthClient.OAuthTokens[0].ID,
+		},
+		Project: &Project{
+			ID: orgTest.DefaultProject.ID,
+		},
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if err := client.Stacks.Delete(ctx, stackTest2.ID); err != nil {
+			t.Logf("Failed to cleanup stack %s: %v", stackTest2.ID, err)
+		}
+	})
+
+	// Wait for stack to be ready by triggering configuration update
+	_, err = client.Stacks.FetchLatestFromVcs(ctx, stackTest2.ID)
+	// Don't require this to succeed as it might not be needed
+
+	t.Run("with first stack added", func(t *testing.T) {
+		options := VariableSetApplyToStacksOptions{
+			Stacks: []*Stack{{ID: stackTest1.ID}},
+		}
+		err = client.VariableSets.ApplyToStacks(ctx, vsTest.ID, &options)
+		require.NoError(t, err)
+
+		readOpts := &VariableSetReadOptions{Include: &[]VariableSetIncludeOpt{VariableSetStacks}}
+		vsAfter, err := client.VariableSets.Read(ctx, vsTest.ID, readOpts)
+		require.NoError(t, err)
+
+		assert.Equal(t, 1, len(vsAfter.Stacks))
+		assert.Equal(t, stackTest1.ID, vsAfter.Stacks[0].ID)
+	})
+
+	t.Run("with second stack added", func(t *testing.T) {
+		options := VariableSetApplyToStacksOptions{
+			Stacks: []*Stack{stackTest2},
+		}
+
+		err := client.VariableSets.ApplyToStacks(ctx, vsTest.ID, &options)
+		require.NoError(t, err)
+
+		readOpts := &VariableSetReadOptions{Include: &[]VariableSetIncludeOpt{VariableSetStacks}}
+		vsAfter, err := client.VariableSets.Read(ctx, vsTest.ID, readOpts)
+		require.NoError(t, err)
+
+		assert.Equal(t, 2, len(vsAfter.Stacks))
+		stackIDs := []string{vsAfter.Stacks[0].ID, vsAfter.Stacks[1].ID}
+
+		assert.Contains(t, stackIDs, stackTest1.ID)
+		assert.Contains(t, stackIDs, stackTest2.ID)
+	})
+
+	t.Run("with first stack removed", func(t *testing.T) {
+		options := VariableSetRemoveFromStacksOptions{
+			Stacks: []*Stack{stackTest1},
+		}
+
+		err := client.VariableSets.RemoveFromStacks(ctx, vsTest.ID, &options)
+		require.NoError(t, err)
+
+		readOpts := &VariableSetReadOptions{Include: &[]VariableSetIncludeOpt{VariableSetStacks}}
+		vsAfter, err := client.VariableSets.Read(ctx, vsTest.ID, readOpts)
+		require.NoError(t, err)
+
+		assert.Equal(t, 1, len(vsAfter.Stacks))
+		assert.Equal(t, stackTest2.ID, vsAfter.Stacks[0].ID)
+	})
+
+	t.Run("when variable set ID is invalid", func(t *testing.T) {
+		applyOptions := VariableSetApplyToStacksOptions{
+			Stacks: []*Stack{stackTest1},
+		}
+		err := client.VariableSets.ApplyToStacks(ctx, badIdentifier, &applyOptions)
+		assert.EqualError(t, err, ErrInvalidVariableSetID.Error())
+
+		removeOptions := VariableSetRemoveFromStacksOptions{
+			Stacks: []*Stack{stackTest1},
+		}
+		err = client.VariableSets.RemoveFromStacks(ctx, badIdentifier, &removeOptions)
+		assert.EqualError(t, err, ErrInvalidVariableSetID.Error())
+	})
+
+	t.Run("when stack ID is invalid", func(t *testing.T) {
+		badStack := &Stack{
+			ID: badIdentifier,
+		}
+
+		applyOptions := VariableSetApplyToStacksOptions{
+			Stacks: []*Stack{badStack},
+		}
+		err := client.VariableSets.ApplyToStacks(ctx, vsTest.ID, &applyOptions)
+		assert.EqualError(t, err, ErrRequiredStackID.Error())
+
+		removeOptions := VariableSetRemoveFromStacksOptions{
+			Stacks: []*Stack{badStack},
+		}
+		err = client.VariableSets.RemoveFromStacks(ctx, vsTest.ID, &removeOptions)
+		assert.EqualError(t, err, ErrRequiredStackID.Error())
+	})
+}
+
 func TestVariableSetsUpdateWorkspaces(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -596,5 +744,72 @@ func TestVariableSetsUpdateWorkspaces(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, len(options.Workspaces), len(vsAfter.Workspaces))
+	})
+}
+
+func TestVariableSetsUpdateStacks(t *testing.T) {
+	t.Parallel()
+	skipUnlessBeta(t)
+
+	client := testClient(t)
+	ctx := context.Background()
+
+	orgTest, orgTestCleanup := createOrganization(t, client)
+	t.Cleanup(orgTestCleanup)
+
+	vsTest, vsTestCleanup := createVariableSet(t, client, orgTest, VariableSetCreateOptions{})
+	t.Cleanup(vsTestCleanup)
+
+	oauthClient, cleanup := createOAuthClient(t, client, orgTest, nil)
+	t.Cleanup(cleanup)
+
+	stackTest, err := client.Stacks.Create(ctx, StackCreateOptions{
+		Name: "test-stack",
+		VCSRepo: &StackVCSRepoOptions{
+			Identifier:   "hashicorp-guides/pet-nulls-stack",
+			OAuthTokenID: oauthClient.OAuthTokens[0].ID,
+		},
+		Project: &Project{
+			ID: orgTest.DefaultProject.ID,
+		},
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if err := client.Stacks.Delete(ctx, stackTest.ID); err != nil {
+			t.Logf("Failed to cleanup stack %s: %v", stackTest.ID, err)
+		}
+	})
+
+	// Wait for stack to be ready by triggering configuration update
+	_, err = client.Stacks.FetchLatestFromVcs(ctx, stackTest.ID)
+	require.NoError(t, err)
+
+	t.Run("with valid stacks", func(t *testing.T) {
+		options := VariableSetUpdateStacksOptions{
+			Stacks: []*Stack{stackTest},
+		}
+
+		_, err := client.VariableSets.UpdateStacks(ctx, vsTest.ID, &options)
+		require.NoError(t, err)
+
+		readOpts := &VariableSetReadOptions{Include: &[]VariableSetIncludeOpt{VariableSetStacks}}
+		vsAfter, err := client.VariableSets.Read(ctx, vsTest.ID, readOpts)
+		require.NoError(t, err)
+
+		assert.Equal(t, len(options.Stacks), len(vsAfter.Stacks))
+		assert.Equal(t, options.Stacks[0].ID, vsAfter.Stacks[0].ID)
+
+		options = VariableSetUpdateStacksOptions{
+			Stacks: []*Stack{},
+		}
+
+		_, err = client.VariableSets.UpdateStacks(ctx, vsTest.ID, &options)
+		require.NoError(t, err)
+
+		readOpts = &VariableSetReadOptions{Include: &[]VariableSetIncludeOpt{VariableSetStacks}}
+		vsAfter, err = client.VariableSets.Read(ctx, vsTest.ID, readOpts)
+		require.NoError(t, err)
+
+		assert.Equal(t, len(options.Stacks), len(vsAfter.Stacks))
 	})
 }

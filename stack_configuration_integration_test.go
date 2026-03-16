@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package tfe
@@ -13,6 +13,7 @@ import (
 )
 
 func TestStackConfigurationList(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)
@@ -80,6 +81,7 @@ func TestStackConfigurationList(t *testing.T) {
 }
 
 func TestStackConfigurationCreateUploadAndRead(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)
@@ -124,6 +126,7 @@ func TestStackConfigurationCreateUploadAndRead(t *testing.T) {
 }
 
 func TestStackConfigurationDiagnostics(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)

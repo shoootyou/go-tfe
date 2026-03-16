@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package tfe
@@ -253,6 +253,8 @@ var (
 	ErrInvalidHYOKEncryptedDataKey = errors.New("invalid value for HYOK encrypted data key ID")
 
 	ErrInvalidStackID = errors.New("invalid value for stack ID")
+
+	ErrInvalidRemoteStateOptions = errors.New("invalid attribute\n\nProject remote state cannot be enabled when global remote state sharing is enabled")
 )
 
 var (
@@ -323,6 +325,8 @@ var (
 
 	ErrRequiredProjectID = errors.New("project ID is required")
 
+	ErrRequiredStackID = errors.New("stack ID is required")
+
 	ErrWorkspacesRequired = errors.New("workspaces is required")
 
 	ErrWorkspaceMinLimit = errors.New("must provide at least one workspace")
@@ -378,6 +382,8 @@ var (
 	ErrRequiredGlobalFlag = errors.New("global flag is required")
 
 	ErrRequiredWorkspacesList = errors.New("no workspaces list provided")
+
+	ErrRequiredStacksList = errors.New("no stacks list provided")
 
 	ErrCommentBody = errors.New("comment body is required")
 

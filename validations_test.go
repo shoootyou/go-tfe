@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package tfe
@@ -10,6 +10,7 @@ import (
 )
 
 func TestValidStringID(t *testing.T) {
+	t.Parallel()
 	type testCase struct {
 		externalID    *string
 		expectedValue bool

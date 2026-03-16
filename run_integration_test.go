@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package tfe
@@ -344,11 +344,12 @@ func TestRunsCreate_RunDependent(t *testing.T) {
 		assert.Equal(t, len(vars), len(r.Variables))
 
 		for _, v := range r.Variables {
-			if v.Key == "test_foo" {
+			switch v.Key {
+			case "test_foo":
 				assert.Equal(t, v.Value, "Hello, Foo!")
-			} else if v.Key == "test_variable" {
+			case "test_variable":
 				assert.Equal(t, v.Value, "Hello, World!")
-			} else {
+			default:
 				t.Fatalf("Unexpected variable key: %s", v.Key)
 			}
 		}
@@ -439,6 +440,7 @@ func TestRunsReadWithOptions_RunDependent(t *testing.T) {
 }
 
 func TestRunsReadWithPolicyPaths(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)
@@ -541,6 +543,7 @@ func TestRunsCanceledAt_RunDependent(t *testing.T) {
 }
 
 func TestRunsRunEvents(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -561,6 +564,7 @@ func TestRunsRunEvents(t *testing.T) {
 }
 
 func TestRunsTriggerReason(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -675,22 +679,15 @@ func TestRunsForceCancel_RunDependent(t *testing.T) {
 		err := client.Runs.Cancel(ctx, rTest.ID, RunCancelOptions{})
 		require.NoError(t, err)
 
-		for i := 1; ; i++ {
-			// Refresh the view of the run
-			rTest, err = client.Runs.Read(ctx, rTest.ID)
-			require.NoError(t, err)
-
-			// Check if the timestamp is present.
-			if !rTest.ForceCancelAvailableAt.IsZero() {
-				break
-			}
-
-			if i > 30 {
-				t.Fatal("Timeout waiting for run to be canceled")
-			}
-
-			time.Sleep(time.Second)
-		}
+		rTest, err := retryPatientlyIf(
+			func() (any, error) {
+				return client.Runs.Read(ctx, rTest.ID)
+			},
+			func(r *Run) bool {
+				return r.ForceCancelAvailableAt.IsZero()
+			},
+		)
+		require.NoError(t, err)
 
 		t.Run("force-cancel-available-at timestamp is present", func(t *testing.T) {
 			assert.True(t, rTest.ForceCancelAvailableAt.After(time.Now()))
@@ -797,6 +794,7 @@ func TestRunsDiscard_RunDependent(t *testing.T) {
 }
 
 func TestRun_Unmarshal(t *testing.T) {
+	t.Parallel()
 	data := map[string]interface{}{
 		"data": map[string]interface{}{
 			"type": "runs",
@@ -866,6 +864,7 @@ func TestRun_Unmarshal(t *testing.T) {
 }
 
 func TestRunCreateOptions_Marshal(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 
 	wTest, wTestCleanup := createWorkspace(t, client, nil)

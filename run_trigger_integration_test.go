@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package tfe
@@ -12,6 +12,7 @@ import (
 )
 
 func TestRunTriggerList(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -148,6 +149,7 @@ func TestRunTriggerList(t *testing.T) {
 }
 
 func TestRunTriggerCreate(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -198,6 +200,7 @@ func TestRunTriggerCreate(t *testing.T) {
 }
 
 func TestRunTriggerRead(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -230,7 +233,37 @@ func TestRunTriggerRead(t *testing.T) {
 	})
 }
 
+func TestRunTriggerReadWithOptions(t *testing.T) {
+	client := testClient(t)
+	ctx := context.Background()
+
+	orgTest, orgTestCleanup := createOrganization(t, client)
+	defer orgTestCleanup()
+
+	wTest, wTestCleanup := createWorkspace(t, client, orgTest)
+	defer wTestCleanup()
+
+	sourceableTest, sourceableTestCleanup := createWorkspace(t, client, orgTest)
+	defer sourceableTestCleanup()
+
+	rtTest, rtTestCleanup := createRunTrigger(t, client, wTest, sourceableTest)
+	defer rtTestCleanup()
+
+	t.Run("with include options", func(t *testing.T) {
+		rt, err := client.RunTriggers.ReadWithOptions(ctx, rtTest.ID, &RunTriggerReadOptions{
+			Include: []RunTriggerIncludeOpt{RunTriggerSourceable, RunTriggerWorkspace},
+		})
+		require.NoError(t, err)
+		assert.Equal(t, rtTest.ID, rt.ID)
+		require.NotNil(t, rt.Sourceable)
+		assert.Equal(t, sourceableTest.ID, rt.Sourceable.ID)
+		require.NotNil(t, rt.Workspace)
+		assert.Equal(t, wTest.ID, rt.Workspace.ID)
+	})
+}
+
 func TestRunTriggerDelete(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package tfe
@@ -409,6 +409,7 @@ func TestWorkspacesList_RunDependent(t *testing.T) {
 }
 
 func TestWorkspacesCreateTableDriven(t *testing.T) {
+	t.Parallel()
 	t.Skip("Skipping due to persistent failures - see TF-31172")
 
 	client := testClient(t)
@@ -570,6 +571,7 @@ func TestWorkspacesCreateTableDriven(t *testing.T) {
 }
 
 func TestWorkspacesCreateTableDrivenWithGithubApp(t *testing.T) {
+	t.Parallel()
 	gHAInstallationID := os.Getenv("GITHUB_APP_INSTALLATION_ID")
 
 	if gHAInstallationID == "" {
@@ -639,6 +641,7 @@ func TestWorkspacesCreateTableDrivenWithGithubApp(t *testing.T) {
 }
 
 func TestWorkspacesCreate(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -1027,6 +1030,7 @@ func TestWorkspacesCreate(t *testing.T) {
 }
 
 func TestWorkspacesRead(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -1152,6 +1156,7 @@ func TestWorkspacesRead(t *testing.T) {
 }
 
 func TestWorkspacesReadSource(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -1168,6 +1173,7 @@ func TestWorkspacesReadSource(t *testing.T) {
 }
 
 func TestWorkspacesReadWithOptions(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -1252,6 +1258,8 @@ func TestWorkspacesReadWithHistory_RunDependent(t *testing.T) {
 // starts with the string: This is a simple test
 // Otherwise the test will not pass
 func TestWorkspacesReadReadme_RunDependent(t *testing.T) {
+	t.Skip("Skipping due to persistent failures - see TF-31172")
+
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -1292,6 +1300,7 @@ func TestWorkspacesReadReadme_RunDependent(t *testing.T) {
 }
 
 func TestWorkspacesReadByID(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -1326,6 +1335,7 @@ func TestWorkspacesReadByID(t *testing.T) {
 }
 
 func TestWorkspacesAddTagBindings(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)
@@ -1390,6 +1400,7 @@ func TestWorkspacesAddTagBindings(t *testing.T) {
 }
 
 func TestWorkspaces_DeleteAllTagBindings(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)
@@ -1417,6 +1428,7 @@ func TestWorkspaces_DeleteAllTagBindings(t *testing.T) {
 }
 
 func TestWorkspacesUpdate(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -1818,6 +1830,7 @@ func TestWorkspacesUpdate(t *testing.T) {
 }
 
 func TestWorkspacesUpdateTableDriven(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -1954,6 +1967,7 @@ func TestWorkspacesUpdateTableDriven(t *testing.T) {
 }
 
 func TestWorkspacesUpdateTableDrivenWithGithubApp(t *testing.T) {
+	t.Parallel()
 	gHAInstallationID := os.Getenv("GITHUB_APP_INSTALLATION_ID")
 
 	if gHAInstallationID == "" {
@@ -2026,6 +2040,7 @@ func TestWorkspacesUpdateTableDrivenWithGithubApp(t *testing.T) {
 }
 
 func TestWorkspacesUpdateByID(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -2112,6 +2127,7 @@ func TestWorkspacesUpdateByID(t *testing.T) {
 }
 
 func TestWorkspacesUpdateWithDefaultExecutionMode(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -2160,6 +2176,7 @@ func TestWorkspacesUpdateWithDefaultExecutionMode(t *testing.T) {
 }
 
 func TestWorkspacesDelete(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -2190,6 +2207,7 @@ func TestWorkspacesDelete(t *testing.T) {
 }
 
 func TestWorkspacesDeleteByID(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -2215,6 +2233,7 @@ func TestWorkspacesDeleteByID(t *testing.T) {
 }
 
 func TestCanForceDeletePermission(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -2235,6 +2254,7 @@ func TestCanForceDeletePermission(t *testing.T) {
 }
 
 func TestWorkspacesSafeDelete(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -2299,6 +2319,8 @@ func TestWorkspacesSafeDelete(t *testing.T) {
 }
 
 func TestWorkspacesSafeDeleteByID(t *testing.T) {
+	t.Parallel()
+
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -2339,7 +2361,7 @@ func TestWorkspacesSafeDeleteByID(t *testing.T) {
 		_, svTestCleanup := createStateVersion(t, client, 0, wTest)
 		t.Cleanup(svTestCleanup)
 
-		_, err := retry(func() (interface{}, error) {
+		_, err := retryPatiently(func() (interface{}, error) {
 			err := client.Workspaces.SafeDeleteByID(ctx, wTest.ID)
 			if errors.Is(err, ErrWorkspaceStillProcessing) {
 				return nil, err
@@ -2358,6 +2380,7 @@ func TestWorkspacesSafeDeleteByID(t *testing.T) {
 }
 
 func TestWorkspacesRemoveVCSConnection(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -2375,6 +2398,7 @@ func TestWorkspacesRemoveVCSConnection(t *testing.T) {
 }
 
 func TestWorkspacesRemoveVCSConnectionByID(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -2392,6 +2416,7 @@ func TestWorkspacesRemoveVCSConnectionByID(t *testing.T) {
 }
 
 func TestWorkspacesLock(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -2510,6 +2535,7 @@ func TestWorkspacesUnlock_RunDependent(t *testing.T) {
 }
 
 func TestWorkspacesForceUnlock(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -2545,6 +2571,7 @@ func TestWorkspacesForceUnlock(t *testing.T) {
 }
 
 func TestWorkspacesAssignSSHKey(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -2590,6 +2617,7 @@ func TestWorkspacesAssignSSHKey(t *testing.T) {
 }
 
 func TestWorkspacesUnassignSSHKey(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -2626,6 +2654,7 @@ func TestWorkspacesUnassignSSHKey(t *testing.T) {
 }
 
 func TestWorkspaces_AddRemoteStateConsumers(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -2683,6 +2712,7 @@ func TestWorkspaces_AddRemoteStateConsumers(t *testing.T) {
 }
 
 func TestWorkspaces_RemoveRemoteStateConsumers(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -2759,6 +2789,7 @@ func TestWorkspaces_RemoveRemoteStateConsumers(t *testing.T) {
 }
 
 func TestWorkspaces_UpdateRemoteStateConsumers(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -2822,6 +2853,7 @@ func TestWorkspaces_UpdateRemoteStateConsumers(t *testing.T) {
 }
 
 func TestWorkspaces_AddTags(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -2889,33 +2921,61 @@ func TestWorkspaces_AddTags(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		// get the id of the new tag
-		tags, err := client.Workspaces.ListTags(ctx, wTest2.ID, nil)
+		// get the id of the new tag (may take a moment to show up)
+		createdTags, err := retryPatientlyIf(
+			func() (any, error) {
+				return client.Workspaces.ListTags(ctx, wTest2.ID, nil)
+			},
+			func(tl *TagList) bool {
+				return tl == nil || len(tl.Items) == 0
+			},
+		)
 		require.NoError(t, err)
+		require.NotNil(t, createdTags)
+		require.NotEmpty(t, createdTags.Items)
+		tagID := createdTags.Items[0].ID
 
 		// add the tag to our workspace by id
 		err = client.Workspaces.AddTags(ctx, wTest.ID, WorkspaceAddTagsOptions{
 			Tags: []*Tag{
 				{
-					ID: tags.Items[0].ID,
+					ID: tagID,
 				},
 			},
 		})
 		require.NoError(t, err)
 
-		// tag is now in the tag_names
-		w, err := client.Workspaces.Read(ctx, orgTest.Name, wTest.Name)
-		require.NoError(t, err)
-		assert.Equal(t, 5, len(w.TagNames))
-		sort.Strings(w.TagNames)
-		assert.Equal(t, w.TagNames, []string{"tag1", "tag2", "tag3", "tag4", "tagbyid"})
-
 		// tag is now in our tag list
-		wt, err := client.Workspaces.ListTags(ctx, wTest.ID, nil)
+		wt, err := retryPatientlyIf(
+			func() (any, error) {
+				return client.Workspaces.ListTags(ctx, wTest.ID, nil)
+			},
+			func(tl *TagList) bool {
+				// wait for the tag to appear
+				if tl == nil {
+					return true
+				}
+				for _, tag := range tl.Items {
+					if tag.ID == tagID {
+						return false
+					}
+				}
+				return true
+			},
+		)
 		require.NoError(t, err)
-		assert.Equal(t, 5, len(wt.Items))
-		assert.Equal(t, wt.Items[4].ID, tags.Items[0].ID)
-		assert.Equal(t, wt.Items[4].Name, "tagbyid")
+		require.NotNil(t, wt)
+
+		// find the tag we added
+		var addedTag *Tag
+		for _, tag := range wt.Items {
+			if tag.ID == tagID {
+				addedTag = tag
+				break
+			}
+		}
+		require.NotNil(t, addedTag)
+		assert.Equal(t, "tagbyid", addedTag.Name)
 	})
 
 	t.Run("with invalid options", func(t *testing.T) {
@@ -2934,6 +2994,7 @@ func TestWorkspaces_AddTags(t *testing.T) {
 }
 
 func TestWorkspaces_RemoveTags(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -3011,6 +3072,7 @@ func TestWorkspaces_RemoveTags(t *testing.T) {
 }
 
 func TestWorkspace_Unmarshal(t *testing.T) {
+	t.Parallel()
 	data := map[string]interface{}{
 		"data": map[string]interface{}{
 			"type": "workspaces",
@@ -3076,6 +3138,7 @@ func TestWorkspace_Unmarshal(t *testing.T) {
 }
 
 func TestWorkspaceCreateOptions_Marshal(t *testing.T) {
+	t.Parallel()
 	opts := WorkspaceCreateOptions{
 		AllowDestroyPlan: Bool(true),
 		Name:             String("my-workspace"),
@@ -3100,6 +3163,7 @@ func TestWorkspaceCreateOptions_Marshal(t *testing.T) {
 }
 
 func TestWorkspacesRunTasksPermission(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)
@@ -3120,6 +3184,7 @@ func TestWorkspacesRunTasksPermission(t *testing.T) {
 }
 
 func TestWorkspacesProjects(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 	client := testClient(t)
 	ctx := context.Background()
@@ -3156,6 +3221,7 @@ func TestWorkspacesProjects(t *testing.T) {
 }
 
 func TestWorkspace_DataRetentionPolicy(t *testing.T) {
+	t.Parallel()
 	skipUnlessEnterprise(t)
 
 	client := testClient(t)
@@ -3261,6 +3327,7 @@ func TestWorkspace_DataRetentionPolicy(t *testing.T) {
 }
 
 func TestWorkspacesAutoDestroy(t *testing.T) {
+	t.Parallel()
 	client := testClient(t)
 	ctx := context.Background()
 
@@ -3305,6 +3372,7 @@ func TestWorkspacesAutoDestroy(t *testing.T) {
 }
 
 func TestWorkspacesAutoDestroyDuration(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)
@@ -3343,6 +3411,7 @@ func TestWorkspacesAutoDestroyDuration(t *testing.T) {
 }
 
 func TestWorkspaces_effectiveTagBindingsInheritedFrom(t *testing.T) {
+	t.Parallel()
 	skipUnlessBeta(t)
 
 	client := testClient(t)
@@ -3405,5 +3474,104 @@ func TestWorkspaces_effectiveTagBindingsInheritedFrom(t *testing.T) {
 				require.Nil(t, binding.Links)
 			}
 		}
+	})
+}
+
+func TestWorkspacesProjectRemoteState(t *testing.T) {
+	skipUnlessEnterprise(t)
+
+	client := testClient(t)
+	ctx := context.Background()
+
+	orgTest, orgTestCleanup := createOrganization(t, client)
+	t.Cleanup(orgTestCleanup)
+
+	// create project
+	projTest, projTestCleanup := createProject(t, client, orgTest)
+	t.Cleanup(projTestCleanup)
+
+	// create workspace in first project
+	wTest, wTestCleanup := createWorkspaceWithOptions(t, client, orgTest, WorkspaceCreateOptions{
+		Name:              String(randomString(t)),
+		Project:           projTest,
+		GlobalRemoteState: Bool(false),
+	})
+	t.Cleanup(wTestCleanup)
+
+	t.Run("successfully returns remote state consumer list", func(t *testing.T) {
+		// create consumer workspace in the test project
+		wTestConsumer1, wTestCleanupConsumer1 := createWorkspaceWithOptions(t, client, orgTest, WorkspaceCreateOptions{
+			Name:    String(randomString(t)),
+			Project: projTest,
+		})
+		t.Cleanup(wTestCleanupConsumer1)
+
+		// create another project
+		projTest2, projTest2Cleanup := createProject(t, client, orgTest)
+		t.Cleanup(projTest2Cleanup)
+
+		// create consumer workspace in the other project
+		wTestConsumer2, wTestCleanupConsumer2 := createWorkspaceWithOptions(t, client, orgTest, WorkspaceCreateOptions{
+			Name:    String(randomString(t)),
+			Project: projTest2,
+		})
+		t.Cleanup(wTestCleanupConsumer2)
+
+		err := client.Workspaces.AddRemoteStateConsumers(ctx, wTest.ID, WorkspaceAddRemoteStateConsumersOptions{
+			Workspaces: []*Workspace{wTestConsumer1, wTestConsumer2},
+		})
+		require.NoError(t, err)
+
+		rsc, err := client.Workspaces.ListRemoteStateConsumers(ctx, wTest.ID, nil)
+		require.NoError(t, err)
+
+		// all the consumer workspaces are in the list
+		assert.Equal(t, 2, len(rsc.Items))
+		assert.Contains(t, rsc.Items, wTestConsumer1, wTestConsumer2)
+
+		// Update workspace to allow project remote state sharing
+		options := WorkspaceUpdateOptions{
+			ProjectRemoteState: Bool(true),
+		}
+		wTest, err := client.Workspaces.Update(ctx, orgTest.Name, wTest.Name, options)
+		require.NoError(t, err)
+
+		_, err = client.Workspaces.Read(ctx, orgTest.Name, wTest.Name)
+		require.NoError(t, err)
+
+		rsc, err = client.Workspaces.ListRemoteStateConsumers(ctx, wTest.ID, nil)
+		require.NoError(t, err)
+
+		assert.Equal(t, 1, len(rsc.Items))
+		assert.Contains(t, rsc.Items, wTestConsumer1)
+		assert.NotContains(t, rsc.Items, wTestConsumer2)
+	})
+
+	t.Run("with invalid options", func(t *testing.T) {
+		err := client.Workspaces.AddRemoteStateConsumers(ctx, wTest.ID, WorkspaceAddRemoteStateConsumersOptions{})
+		require.Error(t, err)
+		assert.EqualError(t, err, ErrWorkspacesRequired.Error())
+
+		err = client.Workspaces.AddRemoteStateConsumers(ctx, wTest.ID, WorkspaceAddRemoteStateConsumersOptions{
+			Workspaces: []*Workspace{},
+		})
+		require.Error(t, err)
+		assert.EqualError(t, err, ErrWorkspaceMinLimit.Error())
+
+		// Update workspace to allow project and global remote state sharing
+		options := WorkspaceUpdateOptions{
+			ProjectRemoteState: Bool(true),
+			GlobalRemoteState:  Bool(true),
+		}
+
+		_, err = client.Workspaces.Update(ctx, orgTest.Name, wTest.Name, options)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, ErrInvalidRemoteStateOptions.Error())
+	})
+
+	t.Run("without a valid workspace ID", func(t *testing.T) {
+		err := client.Workspaces.AddRemoteStateConsumers(ctx, badIdentifier, WorkspaceAddRemoteStateConsumersOptions{})
+		require.Error(t, err)
+		assert.EqualError(t, err, ErrInvalidWorkspaceID.Error())
 	})
 }

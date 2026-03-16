@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package tfe
@@ -12,6 +12,7 @@ import (
 )
 
 func TestAgentsRead(t *testing.T) {
+	t.Parallel()
 	skipUnlessLinuxAMD64(t)
 
 	client := testClient(t)
@@ -46,6 +47,7 @@ func TestAgentsRead(t *testing.T) {
 }
 
 func TestAgentsList(t *testing.T) {
+	t.Parallel()
 	skipUnlessLinuxAMD64(t)
 
 	client := testClient(t)

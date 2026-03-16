@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2018, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package tfe
@@ -13,6 +13,7 @@ import (
 )
 
 func TestGHAInstallationList(t *testing.T) {
+	t.Parallel()
 	gHAInstallationID := os.Getenv("GITHUB_APP_INSTALLATION_ID")
 
 	if gHAInstallationID == "" {
@@ -27,6 +28,7 @@ func TestGHAInstallationList(t *testing.T) {
 	})
 }
 func TestGHAInstallationRead(t *testing.T) {
+	t.Parallel()
 	gHAInstallationID := os.Getenv("GITHUB_APP_INSTALLATION_ID")
 
 	if gHAInstallationID == "" {
